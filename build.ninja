@@ -1,0 +1,40 @@
+# i4 — Ninja + Clang. Run from the repository root.
+#
+#   ninja                              # build under build-dir.ninja → builddir (default: out/)
+#   ninja -t compdb cxx > compile_commands.json   # rule name: cxx; refresh after new .cpp
+#   (PowerShell: .\gen-compdb.ps1   or   ninja -t compdb cxx | Set-Content compile_commands.json)
+#
+# Change the output directory: edit builddir in build-dir.ninja (Ninja on Windows
+# does not support VAR=value overrides on the command line.)
+#
+# Requires: clang++, llvm-ar (LLVM bin on PATH).
+# Keep compile_flags.txt and compile_commands.json in sync with cflags / cxx rules (clangd).
+
+builddir = build
+
+cxx = clang++
+ar = llvm-ar
+cflags = -std=c++20 -O0 -g -Wall -Wextra -I i4core
+
+rule cxx
+  depfile = $out.d
+  deps = gcc
+  command = $cxx -c $in -o $out $cflags -MMD -MF $out.d
+  description = CXX $in
+
+rule ar
+  command = $ar rcs $out $in
+  description = AR $out
+
+rule link
+  command = $cxx -o $out $in
+  description = LINK $out
+
+build $builddir/i4core/Interpreter.o: cxx i4core/Interpreter.cpp
+build $builddir/i4cli/Main.o: cxx i4cli/Main.cpp
+
+build $builddir/i4core/libi4core.a: ar $builddir/i4core/Interpreter.o
+
+build $builddir/i4cli.exe: link $builddir/i4cli/Main.o $builddir/i4core/libi4core.a
+
+default $builddir/i4cli.exe
