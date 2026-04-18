@@ -1,5 +1,4 @@
-# Merged with compile_commands.json / compile_flags.txt. Ensures clangd always sees
-# the same -std and -I as build.ninja (cflags), even if "directory" resolution fails.
+# Merged with compile_commands.json / compile_flags.txt.
 CompileFlags:
   Add:
     - -std=c++20
@@ -7,3 +6,5 @@ CompileFlags:
     - -Wextra
     - -I
     - i4core
+    - -I
+    - build

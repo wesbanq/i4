@@ -1,20 +1,28 @@
 # i4 — Ninja + Clang. Run from the repository root.
 #
-#   ninja                              # build under build-dir.ninja → builddir (default: out/)
+# First-time build: run `ninja` — generates build/I4Version.h, then compiles (Main.o waits on that header).
+# Prerequisites: clang++, llvm-ar, POSIX sh (e.g. Git Bash on Windows). Git optional.
+#
+#   ninja
 #   ninja -t compdb cxx > compile_commands.json   # rule name: cxx; refresh after new .cpp
-#   (PowerShell: .\gen-compdb.ps1   or   ninja -t compdb cxx | Set-Content compile_commands.json)
 #
-# Change the output directory: edit builddir in build-dir.ninja (Ninja on Windows
-# does not support VAR=value overrides on the command line.)
+# builddir is set below (change `builddir = ...` to use another output directory).
 #
-# Requires: clang++, llvm-ar (LLVM bin on PATH).
+# Requires: clang++, llvm-ar (LLVM bin on PATH). Git in PATH for version strings (optional).
 # Keep compile_flags.txt and compile_commands.json in sync with cflags / cxx rules (clangd).
+#
+# Version: scripts/I4Version.h.in + sh/sed (git describe, else unknown) -> $builddir/I4Version.h
 
 builddir = build
 
 cxx = clang++
 ar = llvm-ar
-cflags = -std=c++20 -O0 -g -Wall -Wextra -I i4core
+cflags = -std=c++20 -O0 -g -Wall -Wextra -I i4core -I $builddir
+
+rule gen_version
+  command = sh -c "mkdir -p $builddir && V=$$(git describe --always --dirty 2>/dev/null); [ -z \"$$V\" ] && V=unknown; sed \"s|@@VERSION@@|$$V|g\" i4cli/I4Version.h.in > $out"
+  description = GEN I4Version.h
+  restat = 1
 
 rule cxx
   depfile = $out.d
@@ -30,11 +38,13 @@ rule link
   command = $cxx -o $out $in
   description = LINK $out
 
+build $builddir/I4Version.h: gen_version i4cli/I4Version.h.in
+
 build $builddir/i4core/Interpreter.o: cxx i4core/Interpreter.cpp
-build $builddir/i4cli/Main.o: cxx i4cli/Main.cpp
+build $builddir/i4cli/Main.o: cxx i4cli/Main.cpp | $builddir/I4Version.h
 
 build $builddir/i4core/libi4core.a: ar $builddir/i4core/Interpreter.o
 
-build $builddir/i4cli.exe: link $builddir/i4cli/Main.o $builddir/i4core/libi4core.a
+build $builddir/i4.exe: link $builddir/i4cli/Main.o $builddir/i4core/libi4core.a
 
-default $builddir/i4cli.exe
+default $builddir/i4.exe

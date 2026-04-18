@@ -1,0 +1,2 @@
+#pragma once
+#define I4_VERSION_STRING "@@VERSION@@"

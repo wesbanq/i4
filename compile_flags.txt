@@ -5,3 +5,5 @@
 -Wextra
 -I
 i4core
+-I
+build
