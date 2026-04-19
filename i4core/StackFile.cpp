@@ -1,13 +1,20 @@
 #include "StackFile.h"
 
-#include <algorithm>
 #include <fstream>
 #include <filesystem>
 
 StackFile::StackFile(std::filesystem::path filename) : Filename(std::move(filename)) { }
 
+std::fstream StackFile::GetFile() const {
+    if (!std::filesystem::exists(Filename)) {
+        std::filesystem::create_directories(Filename.parent_path());
+    }
+
+    return std::fstream(Filename, std::ios::in | std::ios::out | std::ios::binary | std::ios::ate);
+}
+
 std::pair<StackWord, unsigned int> StackFile::PopWordNonDestructive() const {
-    std::fstream file(Filename, std::ios::in | std::ios::out | std::ios::binary | std::ios::ate);
+    auto file = GetFile();
     if (!file.good()) {
         return {{ "", false }, 0};
     }
@@ -55,7 +62,7 @@ StackWord StackFile::PopWord() {
 }
 
 void StackFile::PushWord(const StackWord& word) {
-    auto file = std::fstream(Filename, std::ios::in | std::ios::out | std::ios::binary | std::ios::ate);
+    auto file = GetFile();
     if (!file.good())
         return;
 
@@ -63,8 +70,6 @@ void StackFile::PushWord(const StackWord& word) {
         file << TokenSeparator << '"' << word.Word << '"';
     else
         file << TokenSeparator << word.Word;
-    
-    file.close();
 }
 
 void StackFile::Halt() {
@@ -94,8 +99,14 @@ StackFile& StackFile::operator<<(const StackWord& word) {
     return *this;
 }
 
-StackFile& StackFile::operator<<(StackFile& file) {
-    file >> *this;
+StackFile& StackFile::operator<<(const StackFile& src) {
+    std::ifstream in(src.Filename, std::ios::binary);
+    if (!in.good())
+        return *this;
+    std::ofstream out(Filename, std::ios::binary | std::ios::app);
+    if (!out.good())
+        return *this;
+    out << in.rdbuf();
     return *this;
 }
 
@@ -103,3 +114,14 @@ StackFile& StackFile::operator>>(StackWord& word) {
     word = PopWord();
     return *this;
 }
+
+// StackFile& StackFile::operator>>(StackFile& dest) {
+//     std::ifstream in(Filename, std::ios::binary);
+//     if (!in.good())
+//         return *this;
+//     std::ofstream out(dest.Filename, std::ios::binary | std::ios::app);
+//     if (!out.good())
+//         return *this;
+//     out << in.rdbuf();
+//     return *this;
+// }

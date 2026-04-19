@@ -8,6 +8,7 @@ private:
     std::filesystem::path Filename;
 
     std::pair<StackWord, unsigned int> PopWordNonDestructive() const;
+    std::fstream GetFile() const;
 public:
     static constexpr std::string_view CodeExtension = ".i4";
     static constexpr std::string_view StackExtension = ".i4s";
@@ -27,7 +28,7 @@ public:
     static StackFile FindLabel(std::filesystem::path code, std::string name);
 
     StackFile& operator<<(const StackWord& word);
-    StackFile& operator<<(StackFile& file);
+    StackFile& operator<<(const StackFile& file);
     StackFile& operator>>(StackWord& word);
-    StackFile& operator>>(StackFile& file);
+    // StackFile& operator>>(StackFile& file);
 };

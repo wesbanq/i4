@@ -1,10 +1,8 @@
-#include <fstream>
 #include <string>
 #include <iostream>
 #include <filesystem>
 #include <array>
 #include <cstdlib>
-#include <optional>
 #include <tuple>
 #include <string_view>
 #include <vector>
@@ -110,19 +108,19 @@ int main(int argc, char* argv[]) {
 	auto& filenames = std::get<0>(t_);
 	auto options = std::get<1>(t_);
 
-	std::istream* in = &std::cin;
-	std::ostream* out = &std::cout;
-
-	std::optional<std::fstream> file;
-	if (!filenames.empty()) {
-		file.emplace(filenames[0]);
-		if (!file->is_open()) {
-			std::cerr << "Could not open file: \"" << filenames[0] << "\".\n";
-			return 1;
-		}
-		in = &*file;
+	if (filenames.empty()) {
+		std::cerr << "No files provided.\n";
+		return 1;
 	}
 
-	auto interpreter = Interpreter(*in, *out, options);
-	return interpreter.Run(0, {});
+	std::vector<std::string> argvec(argv, argv + argc);
+	auto interpreter = Interpreter(
+		filenames[0], 
+		std::cout, 
+		options
+	);
+	auto result = interpreter.Run(argvec);
+	std::cout << "Program finished with code: " << result << std::endl;
+	
+	return result == "OK" ? 0 : 1;
 }

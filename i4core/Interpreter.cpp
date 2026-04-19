@@ -13,27 +13,45 @@ Interpreter::Interpreter(std::filesystem::path mainFile, std::ostream& outputStr
 	}
 
 std::string Interpreter::Run(std::vector<std::string> args) {
+	for (const auto& arg : args)
+		StackFile << arg;
+	
 	while (!Finished())
 		Step();
-
-	auto word = StackFile.PopWord();
-	if (word.Word.empty())
-		return "OK";
 	
-	return word.Word;
+
+	return StackFile.PopWord().Word;
 }
 
 void Interpreter::Step() {
-	auto lastWord = CodeFile.PopWord();
-	if (lastWord.Word.empty())
+	auto word = CodeFile.PopWord();
+	if (word.Word.empty())
 		return;
 	
-	if (lastWord.Word == Words::Def) {
-		auto name = CodeFile.PopWord();
+	if (word.Literal)
+		StackFile << word;
+
+	if (word.Word == Words::Def) {
+		auto name = StackFile.PopWord();
+		auto meaning = StackFile.PopWord();
+		if (name.Word.empty() || meaning.Word.empty())
+			return;
+		
+		auto defFile = StackFile::FindDef(CodeFilePath, name.Word);
+		meaning.Literal = false;
+		defFile << meaning;
+
+		return;
+	}
+	if (word.Word == Words::Label) {
+		auto name = StackFile.PopWord();
 		if (name.Word.empty())
 			return;
 		
-		CodeFile << StackFile::FindDef(CodeFilePath, name.Word);
+		auto labelFile = StackFile::FindLabel(CodeFilePath, name.Word);
+		labelFile << word;
+
+		return;
 	}
 }
 
