@@ -233,5 +233,9 @@ bool Interpreter::Finished() const {
 }
 
 bool Interpreter::HasOption(Args opt) const {
-	return (Options & opt) != 0;
+	return HasOption(Options, opt);
+}
+
+bool Interpreter::HasOption(unsigned char options, Args opt) {
+	return (options & static_cast<unsigned char>(opt)) != 0;
 }

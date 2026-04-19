@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <ostream>
 #include <string>
+#include <vector>
 
 class Runner final : public IRunner {
 public:

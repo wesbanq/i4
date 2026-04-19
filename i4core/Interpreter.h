@@ -34,4 +34,5 @@ public:
 	bool Finished() const;
 
 	bool HasOption(Args opt) const;
+	static bool HasOption(unsigned char options, Args opt);
 };

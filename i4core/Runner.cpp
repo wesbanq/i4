@@ -2,9 +2,21 @@
 #include "Interpreter.h"
 #include <filesystem>
 
-std::string Runner::Start(std::filesystem::path mainFile, unsigned char options, std::ostream& output,
+std::string Runner::Start(std::filesystem::path mainFile, 
+                          unsigned char options, 
+                          std::ostream& output,
                           const std::vector<std::string>& programArgs) const {
-    Interpreter interpreter(*this, std::move(mainFile), output, options);
+    std::filesystem::path runPath = std::move(mainFile);
+    if (Interpreter::HasOption(options, Interpreter::Args::BOX)) {
+        const std::filesystem::path parent = runPath.parent_path();
+        const std::filesystem::path boxDir = parent / runPath.stem();
+        std::filesystem::create_directories(boxDir);
+        const std::filesystem::path boxedMain = boxDir / runPath.filename();
+        std::filesystem::copy_file(runPath, boxedMain, std::filesystem::copy_options::overwrite_existing);
+        runPath = std::move(boxedMain);
+    }
+
+    Interpreter interpreter(*this, std::move(runPath), output, options);
     return interpreter.Run(programArgs);
 }
 
