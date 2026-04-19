@@ -1,13 +1,16 @@
 #include "Runner.h"
 #include "Interpreter.h"
+#include "Option.h"
 #include <filesystem>
+#include <iostream>
+#include <string>
 
 std::string Runner::Start(std::filesystem::path mainFile, 
                           unsigned char options, 
                           std::ostream& output,
                           const std::vector<std::string>& programArgs) const {
     std::filesystem::path runPath = std::move(mainFile);
-    if (Interpreter::HasOption(options, Interpreter::Args::BOX)) {
+    if (Interpreter::HasOption(options, Option::BOX)) {
         const std::filesystem::path parent = runPath.parent_path();
         const std::filesystem::path boxDir = parent / runPath.stem();
         std::filesystem::create_directories(boxDir);
@@ -17,7 +20,17 @@ std::string Runner::Start(std::filesystem::path mainFile,
     }
 
     Interpreter interpreter(*this, std::move(runPath), output, options);
-    return interpreter.Run(programArgs);
+    if (Interpreter::HasOption(options, Option::DEBUG)) {
+        interpreter.PushProgramArgs(programArgs);
+        while (!interpreter.Finished()) {
+            std::string line;
+            std::getline(std::cin, line);
+            interpreter.Step();
+        }
+        return interpreter.PopFinalResult();
+    }
+    else
+        return interpreter.Run(programArgs);
 }
 
 bool Runner::exists(const std::filesystem::path& path) const {

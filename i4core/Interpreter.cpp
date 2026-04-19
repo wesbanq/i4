@@ -69,15 +69,20 @@ Interpreter::Interpreter(const IRunner& fs, std::filesystem::path mainFile, std:
 		}
 	}
 
-std::string Interpreter::Run(std::vector<std::string> args) {
+void Interpreter::PushProgramArgs(const std::vector<std::string>& args) {
 	for (const auto& arg : args)
 		StackFile << arg;
-	
+}
+
+std::string Interpreter::PopFinalResult() {
+	return StackFile.PopWord().Word;
+}
+
+std::string Interpreter::Run(std::vector<std::string> args) {
+	PushProgramArgs(args);
 	while (!Finished())
 		Step();
-	
-
-	return StackFile.PopWord().Word;
+	return PopFinalResult();
 }
 
 void Interpreter::Step() {
@@ -232,10 +237,10 @@ bool Interpreter::Finished() const {
 	return CodeFile.Size() == 0;
 }
 
-bool Interpreter::HasOption(Args opt) const {
+bool Interpreter::HasOption(Option opt) const {
 	return HasOption(Options, opt);
 }
 
-bool Interpreter::HasOption(unsigned char options, Args opt) {
+bool Interpreter::HasOption(unsigned char options, Option opt) {
 	return (options & static_cast<unsigned char>(opt)) != 0;
 }

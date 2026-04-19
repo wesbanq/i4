@@ -2,8 +2,7 @@
 
 #include "IRunner.h"
 #include <filesystem>
-#include <ostream>
-#include <string>
+#include <fstream>
 #include <vector>
 
 class Runner final : public IRunner {
