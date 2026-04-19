@@ -113,7 +113,7 @@ int main(int argc, char* argv[]) {
 	std::istream* in = &std::cin;
 	std::ostream* out = &std::cout;
 
-	std::optional<std::ifstream> file;
+	std::optional<std::fstream> file;
 	if (!filenames.empty()) {
 		file.emplace(filenames[0]);
 		if (!file->is_open()) {

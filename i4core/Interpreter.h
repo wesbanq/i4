@@ -1,14 +1,20 @@
 #pragma once
 
+#include "StackWord.h"
+#include "StackFile.h"
 #include <iostream>
 #include <string>
 #include <vector>
+#include <filesystem>
 
 class Interpreter {
 private:
-	std::istream& InputStream;
 	std::ostream& OutputStream;
 	unsigned char Options;
+	std::filesystem::path WorkDir;
+	std::filesystem::path CodeFilePath;
+	StackFile CodeFile;
+	StackFile StackFile;
 public:
 	enum Args : unsigned char { 
 		NONE	= 0, 
@@ -21,8 +27,11 @@ public:
 		VERSION	= 1 << 6,
 	};
 
-	Interpreter(std::istream& inputStream, std::ostream& outputStream, unsigned char options);
+	Interpreter(std::filesystem::path mainFile, std::ostream& outputStream, unsigned char options);
 
-	int Run(int _argc, std::vector<std::string> _argv);
+	std::string Run(std::vector<std::string> args);
+	void Step();
+	bool Finished() const;
+
 	bool HasOption(Args opt) const;
 };
