@@ -2,6 +2,7 @@
 
 #include "StackWord.h"
 #include <filesystem>
+#include <string_view>
 
 class StackFile {
 private:
@@ -16,7 +17,7 @@ public:
     static constexpr std::string_view LabelExtension = ".i4l_";
 
     explicit StackFile(std::filesystem::path filename);
-    static constexpr auto TokenSeparator = ' ';
+    static constexpr auto Separator = ' ';
 
     StackWord PopWord();
     void PushWord(const StackWord& word);
@@ -24,8 +25,7 @@ public:
     void Halt();
     std::uintmax_t Size() const;
 
-    static StackFile FindDef(std::filesystem::path code, std::string name);
-    static StackFile FindLabel(std::filesystem::path code, std::string name);
+    static StackFile Find(const std::filesystem::path base, const std::string_view name, const std::string_view ext);
 
     StackFile& operator<<(const StackWord& word);
     StackFile& operator<<(const StackFile& file);

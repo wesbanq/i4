@@ -26,16 +26,16 @@ std::pair<StackWord, unsigned int> StackFile::PopWordNonDestructive() const {
 
     file.seekg(-1, std::ios::end);
     std::string word;
-    while (file.peek() != TokenSeparator) {
+    while (file.peek() != Separator) {
         word.push_back(file.peek());
         if (file.tellg() == 0)
             break;
         file.seekg(-1, std::ios::cur);
     }
-    if (file.tellg() == 0 && file.peek() != TokenSeparator)
+    if (file.tellg() == 0 && file.peek() != Separator)
         word.push_back(file.peek());
 
-    while (file.peek() == TokenSeparator && file.tellg() > 0) {
+    while (file.peek() == Separator && file.tellg() > 0) {
         file.seekg(-1, std::ios::cur);
     }
 
@@ -50,7 +50,7 @@ std::pair<StackWord, unsigned int> StackFile::PopWordNonDestructive() const {
     do {
         file.seekg(-1, std::ios::cur);
         ++length;
-    } while (file.tellg() > 0 && file.peek() == TokenSeparator);
+    } while (file.tellg() > 0 && file.peek() == Separator);
 
     return { result, length };
 }
@@ -67,9 +67,9 @@ void StackFile::PushWord(const StackWord& word) {
         return;
 
     if (word.Literal)
-        file << TokenSeparator << '"' << word.Word << '"';
+        file << Separator << '"' << word.Word << '"';
     else
-        file << TokenSeparator << word.Word;
+        file << Separator << word.Word;
 }
 
 void StackFile::Halt() {
@@ -80,18 +80,10 @@ std::uintmax_t StackFile::Size() const {
     return std::filesystem::file_size(Filename);
 }
 
-StackFile StackFile::FindDef(std::filesystem::path code, std::string name) {
-    return StackFile(
-        code.replace_extension(DefExtension)
-        / name
-    );
-}
-
-StackFile StackFile::FindLabel(std::filesystem::path code, std::string name) {
-    return StackFile(
-        code.replace_extension(LabelExtension)
-        / name
-    );
+StackFile StackFile::Find(const std::filesystem::path base, const std::string_view name, const std::string_view ext) {
+    std::filesystem::path p(base);
+    p.replace_extension(ext);
+    return StackFile(p / name);
 }
 
 StackFile& StackFile::operator<<(const StackWord& word) {
