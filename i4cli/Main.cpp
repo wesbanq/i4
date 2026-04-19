@@ -1,12 +1,12 @@
 #include <string>
 #include <iostream>
-#include <filesystem>
 #include <array>
 #include <cstdlib>
 #include <tuple>
 #include <string_view>
 #include <vector>
 #include "Interpreter.h"
+#include "Runner.h"
 
 #if __has_include("I4Version.h")
 #include "I4Version.h"
@@ -68,7 +68,8 @@ static bool MapFlag(std::string_view arg, unsigned char& outBits) {
 	return false;
 }
 
-static std::tuple<std::vector<std::string>, unsigned char> FormatArgs(int argc, char* argv[]) {
+static std::tuple<std::vector<std::string>, unsigned char> FormatArgs(int argc, char* argv[],
+                                                                      const IRunner& fs) {
 	auto filenames = std::vector<std::string>();
 	unsigned char options = 0;
 
@@ -91,7 +92,7 @@ static std::tuple<std::vector<std::string>, unsigned char> FormatArgs(int argc, 
 			}
 		}
 		else {
-			if (std::filesystem::exists(a)) {
+			if (fs.exists(a)) {
 				filenames.push_back(a);
 			}
 			else {
@@ -104,7 +105,8 @@ static std::tuple<std::vector<std::string>, unsigned char> FormatArgs(int argc, 
 }
 
 int main(int argc, char* argv[]) {
-	auto t_ = FormatArgs(argc, argv);
+	Runner runner;
+	auto t_ = FormatArgs(argc, argv, runner);
 	auto& filenames = std::get<0>(t_);
 	auto options = std::get<1>(t_);
 
@@ -114,12 +116,7 @@ int main(int argc, char* argv[]) {
 	}
 
 	std::vector<std::string> argvec(argv, argv + argc);
-	auto interpreter = Interpreter(
-		filenames[0], 
-		std::cout, 
-		options
-	);
-	auto result = interpreter.Run(argvec);
+	auto result = runner.Start(filenames[0], options, std::cout, argvec);
 	std::cout << "Program finished with code: " << result << std::endl;
 	
 	return result == "OK" ? 0 : 1;

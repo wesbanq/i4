@@ -1,11 +1,12 @@
 #pragma once
 
 #include "StackWord.h"
-#include <filesystem>
+#include "IRunner.h"
 #include <string_view>
 
 class StackFile {
 private:
+    const IRunner& Fs;
     std::filesystem::path Filename;
 
     std::pair<StackWord, unsigned int> PopWordNonDestructive() const;
@@ -16,7 +17,7 @@ public:
     static constexpr std::string_view DefExtension = ".i4d_";
     static constexpr std::string_view LabelExtension = ".i4l_";
 
-    explicit StackFile(std::filesystem::path filename);
+    StackFile(const IRunner& fs, std::filesystem::path filename);
     static constexpr auto Separator = ' ';
 
     StackWord PopWord();
@@ -25,7 +26,10 @@ public:
     void Halt();
     std::uintmax_t Size() const;
 
-    static StackFile Find(const std::filesystem::path base, const std::string_view name, const std::string_view ext);
+    static StackFile Find(const IRunner& fs, 
+                          const std::filesystem::path& base, 
+                          const std::string_view name,
+                          const std::string_view ext);
 
     StackFile& operator<<(const StackWord& word);
     StackFile& operator<<(const StackFile& file);

@@ -1,16 +1,11 @@
 #include "StackFile.h"
+#include "IRunner.h"
 
-#include <fstream>
-#include <filesystem>
-
-StackFile::StackFile(std::filesystem::path filename) : Filename(std::move(filename)) { }
+StackFile::StackFile(const IRunner& fs, std::filesystem::path filename)
+    : Fs(fs), Filename(std::move(filename)) { }
 
 std::fstream StackFile::GetFile() const {
-    if (!std::filesystem::exists(Filename)) {
-        std::filesystem::create_directories(Filename.parent_path());
-    }
-
-    return std::fstream(Filename, std::ios::in | std::ios::out | std::ios::binary | std::ios::ate);
+    return Fs.open(Filename, std::ios::in | std::ios::out | std::ios::binary | std::ios::ate);
 }
 
 std::pair<StackWord, unsigned int> StackFile::PopWordNonDestructive() const {
@@ -57,7 +52,7 @@ std::pair<StackWord, unsigned int> StackFile::PopWordNonDestructive() const {
 
 StackWord StackFile::PopWord() {
     auto [word, length] = PopWordNonDestructive();
-    std::filesystem::resize_file(Filename, Size() - length);
+    Fs.resize_file(Filename, Size() - length);
     return word;
 }
 
@@ -73,17 +68,18 @@ void StackFile::PushWord(const StackWord& word) {
 }
 
 void StackFile::Halt() {
-    std::filesystem::resize_file(Filename, 0);
+    Fs.resize_file(Filename, 0);
 }
 
 std::uintmax_t StackFile::Size() const {
-    return std::filesystem::file_size(Filename);
+    return Fs.file_size(Filename);
 }
 
-StackFile StackFile::Find(const std::filesystem::path base, const std::string_view name, const std::string_view ext) {
+StackFile StackFile::Find(const IRunner& fs, const std::filesystem::path& base, const std::string_view name,
+                          const std::string_view ext) {
     std::filesystem::path p(base);
     p.replace_extension(ext);
-    return StackFile(p / name);
+    return StackFile(fs, p / name);
 }
 
 StackFile& StackFile::operator<<(const StackWord& word) {
@@ -92,10 +88,10 @@ StackFile& StackFile::operator<<(const StackWord& word) {
 }
 
 StackFile& StackFile::operator<<(const StackFile& src) {
-    std::ifstream in(src.Filename, std::ios::binary);
+    auto in = src.Fs.open(src.Filename, std::ios::in | std::ios::binary);
     if (!in.good())
         return *this;
-    std::ofstream out(Filename, std::ios::binary | std::ios::app);
+    auto out = Fs.open(Filename, std::ios::out | std::ios::binary | std::ios::app);
     if (!out.good())
         return *this;
     out << in.rdbuf();

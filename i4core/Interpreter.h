@@ -1,16 +1,15 @@
 #pragma once
 
-#include "StackWord.h"
 #include "StackFile.h"
+#include "IRunner.h"
 #include <iostream>
 #include <string>
-#include <vector>
-#include <filesystem>
 
 class Interpreter {
 private:
 	std::ostream& OutputStream;
 	unsigned char Options;
+	const IRunner& Fs;
 	std::filesystem::path WorkDir;
 	std::filesystem::path CodeFilePath;
 	StackFile CodeFile;
@@ -27,7 +26,8 @@ public:
 		VERSION	= 1 << 6,
 	};
 
-	Interpreter(std::filesystem::path mainFile, std::ostream& outputStream, unsigned char options);
+	Interpreter(const IRunner& fs, std::filesystem::path mainFile, std::ostream& outputStream,
+	            unsigned char options);
 
 	std::string Run(std::vector<std::string> args);
 	void Step();

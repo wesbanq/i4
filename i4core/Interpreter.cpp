@@ -1,7 +1,6 @@
 #include "Interpreter.h"
-
+#include "IRunner.h"
 #include <charconv>
-#include <cmath>
 #include <cerrno>
 #include <cstdlib>
 #include <iostream>
@@ -56,14 +55,16 @@ std::string formatNumericResult(long double v) {
 
 } // namespace
 
-Interpreter::Interpreter(std::filesystem::path mainFile, std::ostream& outputStream, unsigned char options) 
-	: OutputStream(outputStream), 
-	  Options(options), 
-	  WorkDir(mainFile.parent_path()), 
-	  CodeFilePath(mainFile), 
-	  CodeFile(CodeFilePath), 
-	  StackFile(CodeFilePath.replace_extension(StackFile::StackExtension)) {
-		if (!std::filesystem::exists(CodeFilePath)) {
+Interpreter::Interpreter(const IRunner& fs, std::filesystem::path mainFile, std::ostream& outputStream,
+                         unsigned char options)
+	: OutputStream(outputStream),
+	  Options(options),
+	  Fs(fs),
+	  WorkDir(mainFile.parent_path()),
+	  CodeFilePath(mainFile),
+	  CodeFile(fs, CodeFilePath),
+	  StackFile(fs, CodeFilePath.replace_extension(StackFile::StackExtension)) {
+		if (!Fs.exists(CodeFilePath)) {
 			throw std::runtime_error("File does not exist: " + CodeFilePath.string());
 		}
 	}
@@ -95,7 +96,7 @@ void Interpreter::Step() {
 		if (name.Word.empty() || meaning.Word.empty())
 			return;
 		
-		auto defFile = StackFile::Find(CodeFilePath, name.Word, StackFile::DefExtension);
+		auto defFile = StackFile::Find(Fs, CodeFilePath, name.Word, StackFile::DefExtension);
 		meaning.Literal = false;
 		defFile << meaning;
 
@@ -106,7 +107,7 @@ void Interpreter::Step() {
 		if (name.Word.empty())
 			return;
 		
-		auto labelFile = StackFile::Find(WorkDir, name.Word, StackFile::LabelExtension);
+		auto labelFile = StackFile::Find(Fs, CodeFilePath, name.Word, StackFile::LabelExtension);
 		labelFile << word;
 
 		return;
@@ -115,14 +116,14 @@ void Interpreter::Step() {
 		auto name = StackFile.PopWord();
 		if (name.Word.empty())
 			return;
-		CodeFile << StackFile::Find(CodeFilePath, name.Word, StackFile::LabelExtension);
+		CodeFile << StackFile::Find(Fs, CodeFilePath, name.Word, StackFile::LabelExtension);
 		return;
 	}
 	if (word.Word == Words::Exec) {
 		auto name = StackFile.PopWord();
 		if (name.Word.empty())
 			return;
-		CodeFile << StackFile::Find(CodeFilePath, name.Word, StackFile::DefExtension);
+		CodeFile << StackFile::Find(Fs, CodeFilePath, name.Word, StackFile::DefExtension);
 		return;
 	}
 	if (word.Word == Words::Out) {
