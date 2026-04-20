@@ -57,19 +57,16 @@ std::string Runner::Start(std::filesystem::path mainFile,
     }
 
     Interpreter interpreter(*this, std::move(runPath), output, options);
-    if (Interpreter::HasOption(options, Option::DONTRUN)) {
+    if (Interpreter::HasOption(options, Option::STEP)) {
         interpreter.PushProgramArgs(programArgs);
         while (!interpreter.Finished()) {
             if (Interpreter::HasOption(options, Option::LIMIT))
                 enforceSafeCodeFileBudget(runPath);
-
-            
             interpreter.Step();
         }
         return interpreter.PopFinalResult();
     }
-    else
-        return interpreter.Run(programArgs);
+    return interpreter.Run(programArgs);
 }
 
 bool Runner::exists(const std::filesystem::path& path) const {

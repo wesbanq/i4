@@ -53,10 +53,8 @@ static constexpr std::array<FlagPair, 18> StringToArgs = {
 	FlagPair{ "-F", Option::NOFS },
 	FlagPair{ "-noweb", Option::NOWEB },
 	FlagPair{ "-W", Option::NOWEB },
-	FlagPair{ "-help", Option::HELP },
-	FlagPair{ "-h", Option::HELP },
-	FlagPair{ "-version", Option::VERSION },
-	FlagPair{ "-V", Option::VERSION },
+	FlagPair{ "-step", Option::STEP },
+	FlagPair{ "-S", Option::STEP },
 };
 
 static bool MapFlag(std::string_view arg, unsigned char& outBits) {
@@ -90,20 +88,21 @@ static std::tuple<std::vector<std::string>, unsigned char, std::vector<std::stri
 			continue;
 		}
 		if (a[0] == '-') {
+			if (std::string_view(a) == "-h" || std::string_view(a) == "-help") {
+				PrintHelp();
+				std::exit(0);
+			}
+			if (std::string_view(a) == "-V" || std::string_view(a) == "-version") {
+				PrintVersion();
+				std::exit(0);
+			}
+
 			unsigned char bits = 0;
 			if (!MapFlag(a, bits)) {
 				std::cerr << "Unknown option: \"" << a << "\".\n";
 				std::exit(1);
 			}
 			options |= bits;
-			if ((bits & static_cast<unsigned char>(Option::HELP)) != 0) {
-				PrintHelp();
-				std::exit(0);
-			}
-			if ((bits & static_cast<unsigned char>(Option::VERSION)) != 0) {
-				PrintVersion();
-				std::exit(0);
-			}
 		} else {
 			if (fs.exists(a)) {
 				filenames.push_back(a);

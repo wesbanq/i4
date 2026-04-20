@@ -205,13 +205,13 @@ std::string DebugRunner::Start(std::filesystem::path mainFile,
     }
 
     Interpreter interpreter(*this, std::move(runPath), output, options);
-    if (Interpreter::HasOption(options, Option::DONTRUN)) {
+    if ((options & static_cast<unsigned char>(Option::DONTRUN)) > 0) {
         interpreter.PushProgramArgs(programArgs);
         while (!interpreter.Finished()) {
             if (Interpreter::HasOption(options, Option::LIMIT))
                 enforceSafeCodeFileBudget(runPath);
 
-            if (Interpreter::HasOption(options, Option::DEBUG)) {
+            if (Interpreter::HasOption(options, Option::STEP)) {
                 std::string line;
                 std::printf("*");
                 std::getline(std::cin, line);
