@@ -31,4 +31,8 @@ struct StackWord {
 
     StackWord();
     StackWord(std::string word, bool literal = false) : Word(std::move(word)), Literal(literal) { }
+
+    std::string Format() const {
+        return Literal ? "\"" + Word + "\"" : Word;
+    }
 };

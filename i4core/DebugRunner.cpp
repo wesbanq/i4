@@ -216,6 +216,7 @@ std::string DebugRunner::Start(std::filesystem::path mainFile,
                 std::printf("*");
                 std::getline(std::cin, line);
             }
+
             interpreter.Step();
         }
         return interpreter.PopFinalResult();

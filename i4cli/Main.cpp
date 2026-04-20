@@ -125,7 +125,7 @@ int main(int argc, char* argv[]) {
 	}
 
 	std::string result;
-	if (Interpreter::HasOption(options, Option::DEBUG)) {
+	if (Interpreter::HasOption(options, Option::MEMORY)) {
 		DebugRunner debugRunner = DebugRunner::fromFilesystemAround(filenames[0]);
 		std::error_code ec;
 		const std::filesystem::path cwd = std::filesystem::current_path();

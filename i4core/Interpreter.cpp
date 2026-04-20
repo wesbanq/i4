@@ -77,6 +77,10 @@ std::string Interpreter::Run(std::vector<std::string> args) {
 
 void Interpreter::Step() {
 	auto word = CodeFile.PopWord();
+
+	if (HasOption(Option::VERBOSE))
+		std::cout << word.Format() << '\n';
+
 	if (word.Word.empty())
 		return;
 	
