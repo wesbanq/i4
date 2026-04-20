@@ -6,7 +6,11 @@
 #include <vector>
 
 class Runner final : public IRunner {
+private:
+    void enforceSafeCodeFileBudget(const std::filesystem::path& mainFile) const;
 public:
+    static constexpr unsigned SafeCodeFilesLimitMb = 16;
+
     bool exists(const std::filesystem::path& path) const override;
     void resize_file(const std::filesystem::path& path, std::uintmax_t size) const override;
     std::fstream open(const std::filesystem::path& path, std::ios::openmode mode) const override;

@@ -1,9 +1,38 @@
 #include "Runner.h"
 #include "Interpreter.h"
 #include "Option.h"
+#include "StackFile.h"
 #include <filesystem>
 #include <iostream>
+#include <stdexcept>
 #include <string>
+
+void Runner::enforceSafeCodeFileBudget(const std::filesystem::path& mainFile) const {
+    std::filesystem::path dir = mainFile.parent_path();
+    if (dir.empty())
+        dir = std::filesystem::current_path();
+
+    const std::uintmax_t limitBytes =
+        static_cast<std::uintmax_t>(SafeCodeFilesLimitMb) * 1024 * 1024;
+    std::uintmax_t total = 0;
+
+    std::filesystem::recursive_directory_iterator it(
+        dir, std::filesystem::directory_options::skip_permission_denied);
+    for (const std::filesystem::directory_entry& entry : it) {
+        if (!entry.is_regular_file())
+            continue;
+        const std::filesystem::path& p = entry.path();
+        const std::string ext = p.extension().string();
+        if (ext.find(StackFile::CodeExtension) == std::string::npos)
+            continue;
+        total += file_size(p);
+        if (total > limitBytes) {
+            throw std::runtime_error(
+                "SAFE: total size of files with \"" + std::string(StackFile::CodeExtension) +
+                "\" in the extension exceeds " + std::to_string(SafeCodeFilesLimitMb) + " MiB");
+        }
+    }
+}
 
 std::string Runner::Start(std::filesystem::path mainFile, 
                           unsigned char options, 
@@ -20,11 +49,16 @@ std::string Runner::Start(std::filesystem::path mainFile,
     }
 
     Interpreter interpreter(*this, std::move(runPath), output, options);
-    if (Interpreter::HasOption(options, Option::DEBUG)) {
+    if (Interpreter::HasOption(options, Option::DONTRUN)) {
         interpreter.PushProgramArgs(programArgs);
         while (!interpreter.Finished()) {
-            std::string line;
-            std::getline(std::cin, line);
+            if (Interpreter::HasOption(options, Option::LIMIT))
+                enforceSafeCodeFileBudget(runPath);
+
+            if (Interpreter::HasOption(options, Option::DEBUG)) {
+                std::string line;
+                std::getline(std::cin, line);
+            }
             interpreter.Step();
         }
         return interpreter.PopFinalResult();

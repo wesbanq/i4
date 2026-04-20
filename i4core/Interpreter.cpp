@@ -1,9 +1,12 @@
 #include "Interpreter.h"
+#include "HttpClient.h"
 #include "IRunner.h"
 #include <charconv>
 #include <cerrno>
 #include <cstdlib>
+#include <fstream>
 #include <iostream>
+#include <iterator>
 #include <optional>
 #include <sstream>
 
@@ -145,6 +148,26 @@ void Interpreter::Step() {
 		StackFile << StackWord(std::move(line), true);
 		return;
 	}
+
+	if (!HasOption(Option::NOFS)) {
+		if (word.Word == Words::Open) {
+			auto pathWord = StackFile.PopWord();
+			if (pathWord.Word.empty())
+				return;
+			std::filesystem::path path(pathWord.Word);
+			if (path.is_relative())
+				path = WorkDir / path;
+			if (!Fs.exists(path))
+				return;
+			auto in = Fs.open(path, std::ios::in | std::ios::binary);
+			if (!in.good())
+				return;
+			std::string content((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+			StackFile << StackWord(std::move(content), true);
+			return;
+		}
+	}
+	
 	if (word.Word == Words::Dupe) {
 		auto top = StackFile.PopWord();
 		if (top.Word.empty())
@@ -231,6 +254,43 @@ void Interpreter::Step() {
 		});
 		return;
 	}
+
+	if (!HasOption(Option::NOWEB)) {
+		auto doHttp = [this](std::string_view method) {
+			auto address = StackFile.PopWord();
+			auto payload = StackFile.PopWord();
+			if (address.Word.empty())
+				return;
+			auto response = HttpRequest(method, address.Word, payload.Word);
+			if (!response.has_value())
+				return;
+			StackFile << StackWord(std::move(*response), true);
+		};
+	
+		if (word.Word == Words::Get) {
+			doHttp("GET");
+			return;
+		}
+		if (word.Word == Words::Post) {
+			doHttp("POST");
+			return;
+		}
+		if (word.Word == Words::Put) {
+			doHttp("PUT");
+			return;
+		}
+		if (word.Word == Words::Delete) {
+			doHttp("DELETE");
+			return;
+		}
+		if (word.Word == Words::Options) {
+			doHttp("OPTIONS");
+			return;
+		}
+	}
+
+	// if all else fails
+	StackFile << word;
 }
 
 bool Interpreter::Finished() const {
@@ -242,5 +302,5 @@ bool Interpreter::HasOption(Option opt) const {
 }
 
 bool Interpreter::HasOption(unsigned char options, Option opt) {
-	return (options & static_cast<unsigned char>(opt)) != 0;
+	return (options & static_cast<unsigned char>(opt)) == static_cast<unsigned char>(opt);
 }
