@@ -2,12 +2,9 @@
 #include "HttpClient.h"
 #include "IRunner.h"
 #include <charconv>
-#include <cerrno>
-#include <cstdlib>
 #include <iostream>
 #include <iterator>
 #include <optional>
-#include <sstream>
 
 namespace {
 
@@ -17,43 +14,27 @@ struct ParsedNum {
 	NumKind kind;
 	std::int64_t i;
 	long double d;
+
+	ParsedNum(std::int64_t _i) : kind(NumKind::Int), i(_i), d(_i) {}
+	ParsedNum(long double _d) : kind(NumKind::Float), i(_d), d(_d) {}
+	explicit ParsedNum(std::string s) {
+		const char* first = s.data();
+		const char* last = first + s.size();
+		if (std::find(s.begin(), s.end(), '.') == s.end()) {
+			kind = NumKind::Int;
+			auto [ptr, ec] = std::from_chars(first, last, i);
+			if (ec != std::errc() || ptr != last)
+				throw std::runtime_error("Invalid number: " + s);
+			d = static_cast<long double>(i);
+		} else {
+			kind = NumKind::Float;
+			auto [ptr, ec] = std::from_chars(first, last, d);
+			if (ec != std::errc() || ptr != last)
+				throw std::runtime_error("Invalid number: " + s);
+			i = static_cast<std::int64_t>(d);
+		}
+	}
 };
-
-long double toLongDouble(const ParsedNum& n) {
-	return n.kind == NumKind::Int ? static_cast<long double>(n.i) : n.d;
-}
-
-std::optional<ParsedNum> tryParseStackNumeric(const StackWord& w) {
-	const std::string& s = w.Word;
-	if (s.empty())
-		return std::nullopt;
-
-	std::int64_t i{};
-	const auto* begin = s.data();
-	const auto* end = begin + s.size();
-	auto [ptr, ec] = std::from_chars(begin, end, i, 10);
-	if (ec == std::errc{} && ptr == end)
-		return ParsedNum{ NumKind::Int, i, 0 };
-
-	char* parseEnd = nullptr;
-	errno = 0;
-	long double d = std::strtold(s.c_str(), &parseEnd);
-	if (parseEnd == s.c_str() + s.size() && errno == 0 && parseEnd != s.c_str())
-		return ParsedNum{ NumKind::Float, 0, d };
-
-	return std::nullopt;
-}
-
-std::string formatNumericResult(std::int64_t v) {
-	return std::to_string(v);
-}
-
-std::string formatNumericResult(long double v) {
-	std::ostringstream os;
-	os.precision(21);
-	os << v;
-	return os.str();
-}
 
 } // namespace
 
@@ -79,7 +60,12 @@ void Interpreter::PushProgramArgs(const std::vector<std::string>& args) {
 }
 
 std::string Interpreter::PopFinalResult() {
-	return StackFile.PopWord().Word;
+	auto lastWord = StackFile.PopWord().Word;
+	
+	if (lastWord == "")
+		lastWord = "OK";
+	
+	return lastWord;
 }
 
 std::string Interpreter::Run(std::vector<std::string> args) {
@@ -186,80 +172,72 @@ void Interpreter::Step() {
 	auto doBinaryArithmetic = [this](auto op) {
 		auto rhsW = StackFile.PopWord();
 		auto lhsW = StackFile.PopWord();
-		if (rhsW.Word.empty() || lhsW.Word.empty())
-			return;
-		auto rhs = tryParseStackNumeric(rhsW);
-		auto lhs = tryParseStackNumeric(lhsW);
-		if (!rhs || !lhs)
-			return;
-		op(*lhs, *rhs);
+
+		if (rhsW.Word.empty())
+			rhsW = StackWord("0", true);
+		if (lhsW.Word.empty())
+			lhsW = StackWord("0", true);
+
+		auto rhs = ParsedNum(rhsW.Word);
+		auto lhs = ParsedNum(lhsW.Word);
+		op(lhs, rhs);
 	};
 
 	if (word.Word == Words::Add) {
 		doBinaryArithmetic([this](const ParsedNum& lhs, const ParsedNum& rhs) {
 			if (lhs.kind == NumKind::Int && rhs.kind == NumKind::Int)
-				StackFile << StackWord(formatNumericResult(lhs.i + rhs.i), true);
+				StackFile << StackWord(std::to_string(lhs.i + rhs.i), true);
 			else
-				StackFile << StackWord(formatNumericResult(toLongDouble(lhs) + toLongDouble(rhs)), true);
+				StackFile << StackWord(std::to_string(lhs.d + rhs.d), true);
 		});
 		return;
 	}
 	if (word.Word == Words::Sub) {
 		doBinaryArithmetic([this](const ParsedNum& lhs, const ParsedNum& rhs) {
 			if (lhs.kind == NumKind::Int && rhs.kind == NumKind::Int)
-				StackFile << StackWord(formatNumericResult(lhs.i - rhs.i), true);
+				StackFile << StackWord(std::to_string(lhs.i - rhs.i), true);
 			else
-				StackFile << StackWord(formatNumericResult(toLongDouble(lhs) - toLongDouble(rhs)), true);
+				StackFile << StackWord(std::to_string(lhs.d - rhs.d), true);
 		});
 		return;
 	}
 	if (word.Word == Words::Mul) {
 		doBinaryArithmetic([this](const ParsedNum& lhs, const ParsedNum& rhs) {
 			if (lhs.kind == NumKind::Int && rhs.kind == NumKind::Int)
-				StackFile << StackWord(formatNumericResult(lhs.i * rhs.i), true);
+				StackFile << StackWord(std::to_string(lhs.i * rhs.i), true);
 			else
-				StackFile << StackWord(formatNumericResult(toLongDouble(lhs) * toLongDouble(rhs)), true);
+				StackFile << StackWord(std::to_string(lhs.d * rhs.d), true);
 		});
 		return;
 	}
 	if (word.Word == Words::Div) {
 		doBinaryArithmetic([this](const ParsedNum& lhs, const ParsedNum& rhs) {
-			if (lhs.kind == NumKind::Int && rhs.kind == NumKind::Int) {
-				if (rhs.i == 0)
-					return;
-				StackFile << StackWord(formatNumericResult(lhs.i / rhs.i), true);
-			} else {
-				const long double b = toLongDouble(rhs);
-				if (b == 0.0L)
-					return;
-				StackFile << StackWord(formatNumericResult(toLongDouble(lhs) / b), true);
-			}
+			if (rhs.i == 0)
+				return;
+				
+			StackFile << StackWord(std::to_string(lhs.d / rhs.d), true);
 		});
 		return;
 	}
 	if (word.Word == Words::Mod) {
 		doBinaryArithmetic([this](const ParsedNum& lhs, const ParsedNum& rhs) {
-			if (lhs.kind != NumKind::Int || rhs.kind != NumKind::Int || rhs.i == 0)
-				return;
-			StackFile << StackWord(formatNumericResult(lhs.i % rhs.i), true);
+			StackFile << StackWord(std::to_string(lhs.i % rhs.i), true);
 		});
 		return;
 	}
 	if (word.Word == Words::Pow) {
 		doBinaryArithmetic([this](const ParsedNum& lhs, const ParsedNum& rhs) {
-			const long double a = toLongDouble(lhs);
-			const long double b = toLongDouble(rhs);
-			if (a == 0.0L && b < 0.0L)
+			if (lhs.d == 0.0L && rhs.d < 0.0L)
 				return;
-			StackFile << StackWord(formatNumericResult(std::pow(a, b)), true);
+			StackFile << StackWord(std::to_string(std::pow(lhs.d, rhs.d)), true);
 		});
 		return;
 	}
 
 	if (!HasOption(Option::NOWEB)) {
 		auto doHttp = [this](std::string_view method) {
-			auto address = StackFile.PopWord();
 			auto payload = StackFile.PopWord();
+			auto address = StackFile.PopWord();
 			if (address.Word.empty())
 				return;
 			auto response = HttpRequest(method, address.Word, payload.Word);
@@ -290,7 +268,12 @@ void Interpreter::Step() {
 		}
 	}
 
-	// if all else fails
+	auto def = StackFile::Find(Fs, CodeFilePath, word.Word, StackFile::DefExtension);
+	if (Fs.exists(def.GetPath())) {
+		CodeFile << def;
+		return;
+	}
+
 	StackFile << word;
 }
 

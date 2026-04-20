@@ -9,7 +9,6 @@ private:
     const IRunner& Fs;
     std::filesystem::path Filename;
 
-    std::pair<StackWord, unsigned int> PopWordNonDestructive() const;
     RunnerOpenStream GetFile() const;
 public:
     static constexpr std::string_view CodeExtension = ".i4";
@@ -22,9 +21,11 @@ public:
 
     StackWord PopWord();
     void PushWord(const StackWord& word);
+    std::pair<StackWord, unsigned int> PeekWord() const;
 
     void Halt();
     std::uintmax_t Size() const;
+    std::filesystem::path GetPath() const;
 
     static StackFile Find(const IRunner& fs, 
                           const std::filesystem::path& base, 

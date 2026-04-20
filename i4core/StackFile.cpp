@@ -9,7 +9,7 @@ RunnerOpenStream StackFile::GetFile() const {
     return Fs.open(Filename, std::ios::in | std::ios::out | std::ios::binary | std::ios::ate);
 }
 
-std::pair<StackWord, unsigned int> StackFile::PopWordNonDestructive() const {
+std::pair<StackWord, unsigned int> StackFile::PeekWord() const {
     auto file = GetFile();
     if (!file || !file->good()) {
         return {{ "", false }, 0};
@@ -52,7 +52,7 @@ std::pair<StackWord, unsigned int> StackFile::PopWordNonDestructive() const {
 }
 
 StackWord StackFile::PopWord() {
-    auto [word, length] = PopWordNonDestructive();
+    auto [word, length] = PeekWord();
     Fs.resize_file(Filename, Size() - length);
     return word;
 }
@@ -74,6 +74,10 @@ void StackFile::Halt() {
 
 std::uintmax_t StackFile::Size() const {
     return Fs.file_size(Filename);
+}
+
+std::filesystem::path StackFile::GetPath() const {
+    return Filename;
 }
 
 StackFile StackFile::Find(const IRunner& fs, const std::filesystem::path& base, const std::string_view name,

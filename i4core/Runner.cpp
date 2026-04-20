@@ -63,6 +63,7 @@ std::string Runner::Start(std::filesystem::path mainFile,
             if (Interpreter::HasOption(options, Option::LIMIT))
                 enforceSafeCodeFileBudget(runPath);
 
+            
             interpreter.Step();
         }
         return interpreter.PopFinalResult();
