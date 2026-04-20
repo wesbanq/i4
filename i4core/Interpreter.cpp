@@ -36,6 +36,12 @@ struct ParsedNum {
 	}
 };
 
+template<typename T>
+StackWord ToStackWord(T s) {
+	auto text = std::to_string(s);
+	return StackWord(std::string(text.rbegin(), text.rend()), false);
+}
+
 } // namespace
 
 Interpreter::Interpreter(const IRunner& fs, 
@@ -172,15 +178,22 @@ void Interpreter::Step() {
 		(void)top;
 		return;
 	}
+	if (word.Word == Words::Reverse) {
+		auto top = StackFile.PopWord();
+		if (top.Word.empty())
+			return;
+		StackFile << top;
+		return;
+	}
 
 	auto doBinaryArithmetic = [this](auto op) {
 		auto rhsW = StackFile.PopWord();
 		auto lhsW = StackFile.PopWord();
 
 		if (rhsW.Word.empty())
-			rhsW = StackWord("0", true);
+			rhsW = StackWord("0", false);
 		if (lhsW.Word.empty())
-			lhsW = StackWord("0", true);
+			lhsW = StackWord("0", false);
 
 		auto rhs = ParsedNum(rhsW.Word);
 		auto lhs = ParsedNum(lhsW.Word);
@@ -190,27 +203,27 @@ void Interpreter::Step() {
 	if (word.Word == Words::Add) {
 		doBinaryArithmetic([this](const ParsedNum& lhs, const ParsedNum& rhs) {
 			if (lhs.kind == NumKind::Int && rhs.kind == NumKind::Int)
-				StackFile << StackWord(std::to_string(lhs.i + rhs.i), true);
+				StackFile << ToStackWord(lhs.i + rhs.i);
 			else
-				StackFile << StackWord(std::to_string(lhs.d + rhs.d), true);
+				StackFile << ToStackWord(lhs.d + rhs.d);
 		});
 		return;
 	}
 	if (word.Word == Words::Sub) {
 		doBinaryArithmetic([this](const ParsedNum& lhs, const ParsedNum& rhs) {
 			if (lhs.kind == NumKind::Int && rhs.kind == NumKind::Int)
-				StackFile << StackWord(std::to_string(lhs.i - rhs.i), true);
+				StackFile << ToStackWord(lhs.i - rhs.i);
 			else
-				StackFile << StackWord(std::to_string(lhs.d - rhs.d), true);
+				StackFile << ToStackWord(lhs.d - rhs.d);
 		});
 		return;
 	}
 	if (word.Word == Words::Mul) {
 		doBinaryArithmetic([this](const ParsedNum& lhs, const ParsedNum& rhs) {
 			if (lhs.kind == NumKind::Int && rhs.kind == NumKind::Int)
-				StackFile << StackWord(std::to_string(lhs.i * rhs.i), true);
+				StackFile << ToStackWord(lhs.i * rhs.i);
 			else
-				StackFile << StackWord(std::to_string(lhs.d * rhs.d), true);
+				StackFile << ToStackWord(lhs.d * rhs.d);
 		});
 		return;
 	}
@@ -219,13 +232,13 @@ void Interpreter::Step() {
 			if (rhs.i == 0)
 				return;
 				
-			StackFile << StackWord(std::to_string(lhs.d / rhs.d), true);
+			StackFile << ToStackWord(lhs.d / rhs.d);
 		});
 		return;
 	}
 	if (word.Word == Words::Mod) {
 		doBinaryArithmetic([this](const ParsedNum& lhs, const ParsedNum& rhs) {
-			StackFile << StackWord(std::to_string(lhs.i % rhs.i), true);
+			StackFile << ToStackWord(lhs.i % rhs.i);
 		});
 		return;
 	}
@@ -233,7 +246,117 @@ void Interpreter::Step() {
 		doBinaryArithmetic([this](const ParsedNum& lhs, const ParsedNum& rhs) {
 			if (lhs.d == 0.0L && rhs.d < 0.0L)
 				return;
-			StackFile << StackWord(std::to_string(std::pow(lhs.d, rhs.d)), true);
+			StackFile << ToStackWord(std::pow(lhs.d, rhs.d));
+		});
+		return;
+	}
+	if (word.Word == Words::Eq) {
+		doBinaryArithmetic([this](const ParsedNum& lhs, const ParsedNum& rhs) {
+			if (lhs.kind == NumKind::Float || rhs.kind == NumKind::Float)
+				StackFile << StackWord(std::to_string(lhs.d == rhs.d), false);
+			else
+				StackFile << StackWord(std::to_string(lhs.i == rhs.i), false);
+		});
+		return;
+	}
+	if (word.Word == Words::Neq) {
+		doBinaryArithmetic([this](const ParsedNum& lhs, const ParsedNum& rhs) {
+			if (lhs.kind == NumKind::Float || rhs.kind == NumKind::Float)
+				StackFile << ToStackWord(lhs.d != rhs.d);
+			else
+				StackFile << ToStackWord(lhs.i != rhs.i);
+		});
+		return;
+	}
+	if (word.Word == Words::Lt) {
+		doBinaryArithmetic([this](const ParsedNum& lhs, const ParsedNum& rhs) {
+			if (lhs.kind == NumKind::Float || rhs.kind == NumKind::Float)
+				StackFile << ToStackWord(lhs.d < rhs.d);
+			else
+				StackFile << ToStackWord(lhs.i < rhs.i);
+		});
+		return;
+	}
+	if (word.Word == Words::Gt) {
+		doBinaryArithmetic([this](const ParsedNum& lhs, const ParsedNum& rhs) {
+			if (lhs.kind == NumKind::Float || rhs.kind == NumKind::Float)
+				StackFile << ToStackWord(lhs.d > rhs.d);
+			else
+				StackFile << ToStackWord(lhs.i > rhs.i);
+		});
+		return;
+	}
+	if (word.Word == Words::Le) {
+		doBinaryArithmetic([this](const ParsedNum& lhs, const ParsedNum& rhs) {
+			if (lhs.kind == NumKind::Float || rhs.kind == NumKind::Float)
+				StackFile << StackWord(std::to_string(lhs.d <= rhs.d), false);
+			else
+				StackFile << StackWord(std::to_string(lhs.i <= rhs.i), false);
+		});
+		return;
+	}
+	if (word.Word == Words::Ge) {
+		doBinaryArithmetic([this](const ParsedNum& lhs, const ParsedNum& rhs) {
+			if (lhs.kind == NumKind::Float || rhs.kind == NumKind::Float)
+				StackFile << ToStackWord(lhs.d >= rhs.d);
+			else
+				StackFile << ToStackWord(lhs.i >= rhs.i);
+		});
+		return;
+	}
+	if (word.Word == Words::BitAnd) {
+		doBinaryArithmetic([this](const ParsedNum& lhs, const ParsedNum& rhs) {
+			StackFile << ToStackWord(lhs.i & rhs.i);
+		});
+		return;
+	}
+	if (word.Word == Words::BitOr) {
+		doBinaryArithmetic([this](const ParsedNum& lhs, const ParsedNum& rhs) {
+			StackFile << ToStackWord(lhs.i | rhs.i);
+		});
+		return;
+	}
+	if (word.Word == Words::BitXor) {
+		doBinaryArithmetic([this](const ParsedNum& lhs, const ParsedNum& rhs) {
+			StackFile << ToStackWord(lhs.i ^ rhs.i);
+		});
+		return;
+	}
+	if (word.Word == Words::BitNot) {
+		auto top = StackFile.PopWord();
+		if (top.Word.empty())
+			return;
+		StackFile << ToStackWord(~ParsedNum(top.Word).i);
+		return;
+	}
+	if (word.Word == Words::LogicAnd) {
+		doBinaryArithmetic([this](const ParsedNum& lhs, const ParsedNum& rhs) {
+			StackFile << ToStackWord(lhs.i && rhs.i);
+		});
+		return;
+	}
+	if (word.Word == Words::LogicOr) {
+		doBinaryArithmetic([this](const ParsedNum& lhs, const ParsedNum& rhs) {
+			StackFile << ToStackWord(lhs.i || rhs.i);
+		});
+		return;
+	}
+	if (word.Word == Words::LogicNot) {
+		auto top = StackFile.PopWord();
+		if (top.Word.empty())
+			return;
+		StackFile << StackWord(std::to_string(!ParsedNum(top.Word).i), false);
+		return;
+	}
+	if (word.Word == Words::Shl) {
+		doBinaryArithmetic([this](const ParsedNum& lhs, const ParsedNum& rhs) {
+			StackFile << ToStackWord(lhs.i << rhs.i);
+		});
+		return;
+	}
+	if (word.Word == Words::Shr) {
+		doBinaryArithmetic([this](const ParsedNum& lhs, const ParsedNum& rhs) {
+			StackFile << ToStackWord(lhs.i >> rhs.i);
 		});
 		return;
 	}

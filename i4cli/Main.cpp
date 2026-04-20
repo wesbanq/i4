@@ -55,6 +55,8 @@ static constexpr std::array<FlagPair, 18> StringToArgs = {
 	FlagPair{ "-W", Option::NOWEB },
 	FlagPair{ "-step", Option::STEP },
 	FlagPair{ "-S", Option::STEP },
+	FlagPair{ "-memory", Option::MEMORY },
+	FlagPair{ "-m", Option::MEMORY },
 };
 
 static bool MapFlag(std::string_view arg, unsigned char& outBits) {
