@@ -59,13 +59,15 @@ void StackFile::PushWord(const StackWord& word) {
     if (!file || !file->good())
         return;
 
+    auto text = std::string(word.Word.rbegin(), word.Word.rend());
+
     if (Size() > 0)
         *file << Separator;
 
     if (word.Literal)
-        *file << '"' << word.Word << '"';
+        *file << '"' << text << '"';
     else
-        *file << word.Word;
+        *file << text;
 }
 
 void StackFile::Halt() {

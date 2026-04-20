@@ -147,10 +147,11 @@ std::uintmax_t DebugRunner::file_size(const std::filesystem::path& path) const {
     const std::filesystem::path key = normalizePath(path);
     auto it = files.find(key);
     if (it == files.end()) {
-        throw std::filesystem::filesystem_error(
-            "file_size",
-            path,
-            std::make_error_code(std::errc::no_such_file_or_directory));
+        return 0;
+        //throw std::filesystem::filesystem_error(
+        //    "file_size",
+        //    path,
+        //    std::make_error_code(std::errc::no_such_file_or_directory));
     }
     return it->second.size();
 }
