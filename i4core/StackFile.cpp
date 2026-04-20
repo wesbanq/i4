@@ -1,16 +1,17 @@
 #include "StackFile.h"
 #include "IRunner.h"
+#include <iostream>
 
 StackFile::StackFile(const IRunner& fs, std::filesystem::path filename)
     : Fs(fs), Filename(std::move(filename)) { }
 
-std::fstream StackFile::GetFile() const {
+RunnerOpenStream StackFile::GetFile() const {
     return Fs.open(Filename, std::ios::in | std::ios::out | std::ios::binary | std::ios::ate);
 }
 
 std::pair<StackWord, unsigned int> StackFile::PopWordNonDestructive() const {
     auto file = GetFile();
-    if (!file.good()) {
+    if (!file || !file->good()) {
         return {{ "", false }, 0};
     }
 
@@ -19,20 +20,20 @@ std::pair<StackWord, unsigned int> StackFile::PopWordNonDestructive() const {
         return {{ "", false }, 0};
     }
 
-    file.seekg(-1, std::ios::end);
+    file->seekg(-1, std::ios::end);
     std::string word;
-    while (file.peek() != Separator) {
-        word.push_back(file.peek());
-        if (file.tellg() == 0)
+    while (file->peek() != Separator) {
+        word.push_back(file->peek());
+        if (file->tellg() == 0)
             break;
-        file.seekg(-1, std::ios::cur);
+        file->seekg(-1, std::ios::cur);
     }
-    if (file.tellg() == 0 && file.peek() != Separator)
-        word.push_back(file.peek());
+    //if (file->tellg() == 0 && file->peek() != Separator)
+    //    word.push_back(file->peek());
 
-    while (file.peek() == Separator && file.tellg() > 0) {
-        file.seekg(-1, std::ios::cur);
-    }
+    //while (file->peek() == Separator && file->tellg() > 0) {
+    //    file->seekg(-1, std::ios::cur);
+    //}
 
     StackWord result(word, false);
     if (!word.empty() && word.back() == '"' && word.front() == '"') {
@@ -42,10 +43,10 @@ std::pair<StackWord, unsigned int> StackFile::PopWordNonDestructive() const {
     }
 
     unsigned int length = word.length();
-    do {
-        file.seekg(-1, std::ios::cur);
+    while (file->tellg() > 0 && file->peek() == Separator) {
+        file->seekg(-1, std::ios::cur);
         ++length;
-    } while (file.tellg() > 0 && file.peek() == Separator);
+    }
 
     return { result, length };
 }
@@ -58,13 +59,13 @@ StackWord StackFile::PopWord() {
 
 void StackFile::PushWord(const StackWord& word) {
     auto file = GetFile();
-    if (!file.good())
+    if (!file || !file->good())
         return;
 
     if (word.Literal)
-        file << Separator << '"' << word.Word << '"';
+        *file << Separator << '"' << word.Word << '"';
     else
-        file << Separator << word.Word;
+        *file << Separator << word.Word;
 }
 
 void StackFile::Halt() {
@@ -89,12 +90,12 @@ StackFile& StackFile::operator<<(const StackWord& word) {
 
 StackFile& StackFile::operator<<(const StackFile& src) {
     auto in = src.Fs.open(src.Filename, std::ios::in | std::ios::binary);
-    if (!in.good())
+    if (!in || !in->good())
         return *this;
     auto out = Fs.open(Filename, std::ios::out | std::ios::binary | std::ios::app);
-    if (!out.good())
+    if (!out || !out->good())
         return *this;
-    out << in.rdbuf();
+    *out << in->rdbuf();
     return *this;
 }
 

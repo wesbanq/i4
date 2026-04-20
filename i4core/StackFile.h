@@ -10,7 +10,7 @@ private:
     std::filesystem::path Filename;
 
     std::pair<StackWord, unsigned int> PopWordNonDestructive() const;
-    std::fstream GetFile() const;
+    RunnerOpenStream GetFile() const;
 public:
     static constexpr std::string_view CodeExtension = ".i4";
     static constexpr std::string_view StackExtension = ".i4s";

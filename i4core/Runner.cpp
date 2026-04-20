@@ -2,10 +2,18 @@
 #include "Interpreter.h"
 #include "Option.h"
 #include "StackFile.h"
+#include <fstream>
 #include <filesystem>
-#include <iostream>
 #include <stdexcept>
 #include <string>
+
+namespace {
+
+void deleteFstreamAsIostream(std::iostream* p) {
+    delete static_cast<std::fstream*>(p);
+}
+
+} // namespace
 
 void Runner::enforceSafeCodeFileBudget(const std::filesystem::path& mainFile) const {
     std::filesystem::path dir = mainFile.parent_path();
@@ -55,10 +63,6 @@ std::string Runner::Start(std::filesystem::path mainFile,
             if (Interpreter::HasOption(options, Option::LIMIT))
                 enforceSafeCodeFileBudget(runPath);
 
-            if (Interpreter::HasOption(options, Option::DEBUG)) {
-                std::string line;
-                std::getline(std::cin, line);
-            }
             interpreter.Step();
         }
         return interpreter.PopFinalResult();
@@ -75,8 +79,8 @@ void Runner::resize_file(const std::filesystem::path& path, std::uintmax_t size)
     std::filesystem::resize_file(path, size);
 }
 
-std::fstream Runner::open(const std::filesystem::path& path, std::ios::openmode mode) const {
-    return std::fstream(path, mode);
+RunnerOpenStream Runner::open(const std::filesystem::path& path, std::ios::openmode mode) const {
+    return RunnerOpenStream(new std::fstream(path, mode), deleteFstreamAsIostream);
 }
 
 std::uintmax_t Runner::file_size(const std::filesystem::path& path) const {

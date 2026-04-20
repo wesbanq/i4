@@ -2,7 +2,6 @@
 
 #include "IRunner.h"
 #include <filesystem>
-#include <fstream>
 #include <vector>
 
 class Runner final : public IRunner {
@@ -13,7 +12,7 @@ public:
 
     bool exists(const std::filesystem::path& path) const override;
     void resize_file(const std::filesystem::path& path, std::uintmax_t size) const override;
-    std::fstream open(const std::filesystem::path& path, std::ios::openmode mode) const override;
+    RunnerOpenStream open(const std::filesystem::path& path, std::ios::openmode mode) const override;
     std::uintmax_t file_size(const std::filesystem::path& path) const override;
 
     std::string Start(std::filesystem::path mainFile, 

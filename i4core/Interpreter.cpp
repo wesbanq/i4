@@ -4,7 +4,6 @@
 #include <charconv>
 #include <cerrno>
 #include <cstdlib>
-#include <fstream>
 #include <iostream>
 #include <iterator>
 #include <optional>
@@ -58,7 +57,9 @@ std::string formatNumericResult(long double v) {
 
 } // namespace
 
-Interpreter::Interpreter(const IRunner& fs, std::filesystem::path mainFile, std::ostream& outputStream,
+Interpreter::Interpreter(const IRunner& fs, 
+						 std::filesystem::path mainFile, 
+						 std::ostream& outputStream,
                          unsigned char options)
 	: OutputStream(outputStream),
 	  Options(options),
@@ -66,7 +67,7 @@ Interpreter::Interpreter(const IRunner& fs, std::filesystem::path mainFile, std:
 	  WorkDir(mainFile.parent_path()),
 	  CodeFilePath(mainFile),
 	  CodeFile(fs, CodeFilePath),
-	  StackFile(fs, CodeFilePath.replace_extension(StackFile::StackExtension)) {
+	  StackFile(fs, std::filesystem::path(CodeFilePath).replace_extension(StackFile::StackExtension)) {
 		if (!Fs.exists(CodeFilePath)) {
 			throw std::runtime_error("File does not exist: " + CodeFilePath.string());
 		}
@@ -160,9 +161,9 @@ void Interpreter::Step() {
 			if (!Fs.exists(path))
 				return;
 			auto in = Fs.open(path, std::ios::in | std::ios::binary);
-			if (!in.good())
+			if (!in || !in->good())
 				return;
-			std::string content((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+			std::string content((std::istreambuf_iterator<char>(*in)), std::istreambuf_iterator<char>());
 			StackFile << StackWord(std::move(content), true);
 			return;
 		}

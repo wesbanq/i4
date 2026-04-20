@@ -10,6 +10,7 @@ enum class Option : unsigned char {
 	HELP	= 1 << 5,
 	VERSION	= 1 << 6,
     DEBUG	= 1 << 7,
-	SAFE	= LIMIT | NOFS | NOWEB,
 	DONTRUN = LIMIT | DEBUG,
+	NOEXT	= NOFS | NOWEB,
+	SAFE	= LIMIT | NOEXT,
 };

@@ -50,3 +50,7 @@ out/
 *.vcxproj*
 .vscode/
 *.json
+.vscode/
+x64/
+*.slnx
+.vs/

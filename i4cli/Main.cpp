@@ -1,5 +1,8 @@
 #include "Runner.h"
+#include "DebugRunner.h"
+#include "Interpreter.h"
 #include "Option.h"
+#include <filesystem>
 #include <string>
 #include <iostream>
 #include <cstdlib>
@@ -35,7 +38,7 @@ static void PrintVersion() {
 }
 
 using FlagPair = std::pair<std::string_view, Option>;
-static constexpr std::array<FlagPair, 16> StringToArgs = {
+static constexpr std::array<FlagPair, 18> StringToArgs = {
 	FlagPair{ "-verbose", Option::VERBOSE },
 	FlagPair{ "-v", Option::VERBOSE },
 	FlagPair{ "-safe", Option::SAFE },
@@ -44,6 +47,8 @@ static constexpr std::array<FlagPair, 16> StringToArgs = {
 	FlagPair{ "-b", Option::BOX },
 	FlagPair{ "-debug", Option::DEBUG },
 	FlagPair{ "-d", Option::DEBUG },
+	FlagPair{ "-no-ext", Option::NOEXT },
+	FlagPair{ "-x", Option::NOEXT },
 	FlagPair{ "-nofs", Option::NOFS },
 	FlagPair{ "-F", Option::NOFS },
 	FlagPair{ "-noweb", Option::NOWEB },
@@ -55,10 +60,6 @@ static constexpr std::array<FlagPair, 16> StringToArgs = {
 };
 
 static bool MapFlag(std::string_view arg, unsigned char& outBits) {
-	if (arg == "-no-ext" || arg == "-x") {
-		outBits = static_cast<unsigned char>(Option::NOFS) | static_cast<unsigned char>(Option::NOWEB);
-		return true;
-	}
 	for (const auto& [sv, flag] : StringToArgs) {
 		if (sv.empty()) {
 			continue;
@@ -119,8 +120,20 @@ int main(int argc, char* argv[]) {
 	}
 
 	std::vector<std::string> argvec(argv, argv + argc);
-	auto result = runner.Start(filenames[0], options, std::cout, argvec);
-	std::cout << "Program finished with code: " << result << std::endl;
+	std::string result;
+	if (Interpreter::HasOption(options, Option::DEBUG)) {
+		DebugRunner debugRunner = DebugRunner::fromFilesystemAround(filenames[0]);
+		std::error_code ec;
+		const std::filesystem::path cwd = std::filesystem::current_path();
+		const std::filesystem::path mainAbs = std::filesystem::weakly_canonical(filenames[0]);
+		std::filesystem::path mainPath = std::filesystem::relative(mainAbs, cwd, ec);
+		if (ec)
+			mainPath = std::filesystem::path(filenames[0]);
+		result = debugRunner.Start(mainPath, options, std::cout, argvec);
+	} else {
+		result = runner.Start(filenames[0], options, std::cout, argvec);
+	}
+	std::cout << "\nProgram finished with code: " << result << std::endl;
 	
 	return result == "OK" ? 0 : 1;
 }
