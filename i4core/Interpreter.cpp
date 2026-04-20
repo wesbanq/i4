@@ -90,8 +90,8 @@ void Interpreter::Step() {
 	}
 
 	if (word.Word == Words::Def) {
-		auto name = StackFile.PopWord();
 		auto meaning = StackFile.PopWord();
+		auto name = StackFile.PopWord();
 		if (name.Word.empty() || meaning.Word.empty())
 			return;
 		

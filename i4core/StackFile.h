@@ -18,6 +18,8 @@ public:
 
     StackFile(const IRunner& fs, std::filesystem::path filename);
     static constexpr auto Separator = ' ';
+    static constexpr auto Escape = '\\';
+    static constexpr auto Literal = '"';
 
     StackWord PopWord();
     void PushWord(const StackWord& word);

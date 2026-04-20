@@ -53,4 +53,5 @@ out/
 .vscode/
 x64/
 *.slnx
+*.sln
 .vs/

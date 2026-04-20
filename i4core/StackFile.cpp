@@ -20,26 +20,42 @@ std::pair<StackWord, unsigned int> StackFile::PeekWord() const {
 
     file->seekg(-1, std::ios::end);
     std::string word;
-    while (file->peek() != Separator) {
+    auto endChar = Separator;
+    bool escaping = false;
+    while (file->peek() != endChar || escaping) {
+        if (word.length() == 0 && endChar != Literal && file->peek() == Literal) {
+            endChar = Literal;
+            file->seekg(-1, std::ios::cur);
+            continue;
+        }
+
+        if (!escaping && file->peek() == Escape) {
+            escaping = true;
+            auto c1 = file->peek();
+            file->seekg(-1, std::ios::cur);
+            auto c2 = file->peek();
+            word.push_back(c2);
+            word.push_back(c1);
+            file->seekg(-1, std::ios::cur);
+            continue;
+        }
+
         word.push_back(file->peek());
+        escaping = false;
         if (file->tellg() == 0)
             break;
         file->seekg(-1, std::ios::cur);
     }
-    //if (file->tellg() == 0 && file->peek() != Separator)
-    //    word.push_back(file->peek());
-
-    //while (file->peek() == Separator && file->tellg() > 0)
-    //    file->seekg(-1, std::ios::cur);
-
-    StackWord result(word, false);
-    if (!word.empty() && word.back() == '"' && word.front() == '"') {
-        result.Literal = true;
-        result.Word.pop_back();
-        result.Word.erase(result.Word.begin());
-    }
 
     unsigned int length = word.length();
+    StackWord result(word, false);
+
+    if (endChar != Separator && file->peek() == Literal) {
+        result.Literal = true;
+        length += 2;
+        file->seekg(-1, std::ios::cur);
+    }
+
     while (file->tellg() > 0 && file->peek() == Separator) {
         file->seekg(-1, std::ios::cur);
         ++length;
