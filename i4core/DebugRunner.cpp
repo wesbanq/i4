@@ -26,7 +26,9 @@ class DebugStream final : public std::iostream {
     const bool writeBack_;
 
 public:
-    DebugStream(std::map<std::filesystem::path, std::string>& store, std::filesystem::path key,
+    DebugStream(std::map<std::filesystem::path, 
+                std::string>& store, 
+                std::filesystem::path key,
                 std::ios::openmode mode)
         : std::iostream(&buf_),
           key_(normalizePath(std::move(key))),
@@ -203,7 +205,7 @@ std::string DebugRunner::Start(std::filesystem::path mainFile,
 
     Interpreter interpreter(*this, std::move(runPath), output, options);
     if (Interpreter::HasOption(options, Option::DONTRUN)) {
-        //interpreter.PushProgramArgs(programArgs);
+        interpreter.PushProgramArgs(programArgs);
         while (!interpreter.Finished()) {
             if (Interpreter::HasOption(options, Option::LIMIT))
                 enforceSafeCodeFileBudget(runPath);

@@ -19,7 +19,7 @@
 
 static void PrintHelp() {
 	std::cout <<
-		"Usage: i4 [options] [file ...]\n"
+		"Usage: i4 [options] [file ...] [-- [program-arg ...]]\n"
 		"\n"
 		"Options:\n"
 		"  -v, -verbose    Verbose output\n"
@@ -72,13 +72,23 @@ static bool MapFlag(std::string_view arg, unsigned char& outBits) {
 	return false;
 }
 
-static std::tuple<std::vector<std::string>, unsigned char> FormatArgs(int argc, char* argv[],
-                                                                      const IRunner& fs) {
+static std::tuple<std::vector<std::string>, unsigned char, std::vector<std::string>> FormatArgs(
+	int argc, char* argv[], const IRunner& fs) {
 	auto filenames = std::vector<std::string>();
 	unsigned char options = 0;
+	auto programArgs = std::vector<std::string>();
+	bool afterDoubleDash = false;
 
 	for (int i = 1; i < argc; ++i) {
 		const char* a = argv[i];
+		if (afterDoubleDash) {
+			programArgs.emplace_back(a);
+			continue;
+		}
+		if (std::string_view(a) == "--") {
+			afterDoubleDash = true;
+			continue;
+		}
 		if (a[0] == '-') {
 			unsigned char bits = 0;
 			if (!MapFlag(a, bits)) {
@@ -94,32 +104,27 @@ static std::tuple<std::vector<std::string>, unsigned char> FormatArgs(int argc, 
 				PrintVersion();
 				std::exit(0);
 			}
-		}
-		else {
+		} else {
 			if (fs.exists(a)) {
 				filenames.push_back(a);
-			}
-			else {
+			} else {
 				std::cerr << "Could not locate file: \"" << a << "\".\n";
 				std::exit(1);
 			}
 		}
 	}
-	return {filenames, options};
+	return {filenames, options, std::move(programArgs)};
 }
 
 int main(int argc, char* argv[]) {
 	Runner runner;
-	auto t_ = FormatArgs(argc, argv, runner);
-	auto& filenames = std::get<0>(t_);
-	auto options = std::get<1>(t_);
+	auto [filenames, options, programArgs] = FormatArgs(argc, argv, runner);
 
 	if (filenames.empty()) {
 		std::cerr << "No files provided.\n";
 		return 1;
 	}
 
-	std::vector<std::string> argvec(argv, argv + argc);
 	std::string result;
 	if (Interpreter::HasOption(options, Option::DEBUG)) {
 		DebugRunner debugRunner = DebugRunner::fromFilesystemAround(filenames[0]);
@@ -129,9 +134,9 @@ int main(int argc, char* argv[]) {
 		std::filesystem::path mainPath = std::filesystem::relative(mainAbs, cwd, ec);
 		if (ec)
 			mainPath = std::filesystem::path(filenames[0]);
-		result = debugRunner.Start(mainPath, options, std::cout, argvec);
+		result = debugRunner.Start(mainPath, options, std::cout, programArgs);
 	} else {
-		result = runner.Start(filenames[0], options, std::cout, argvec);
+		result = runner.Start(filenames[0], options, std::cout, programArgs);
 	}
 	std::cout << "\nProgram finished with code: " << result << std::endl;
 	

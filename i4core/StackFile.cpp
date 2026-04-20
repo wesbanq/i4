@@ -11,14 +11,12 @@ RunnerOpenStream StackFile::GetFile() const {
 
 std::pair<StackWord, unsigned int> StackFile::PeekWord() const {
     auto file = GetFile();
-    if (!file || !file->good()) {
+    if (!file || !file->good())
         return {{ "", false }, 0};
-    }
 
     const auto size = Size();
-    if (size <= 0) {
+    if (size <= 0)
         return {{ "", false }, 0};
-    }
 
     file->seekg(-1, std::ios::end);
     std::string word;
@@ -31,9 +29,8 @@ std::pair<StackWord, unsigned int> StackFile::PeekWord() const {
     //if (file->tellg() == 0 && file->peek() != Separator)
     //    word.push_back(file->peek());
 
-    //while (file->peek() == Separator && file->tellg() > 0) {
+    //while (file->peek() == Separator && file->tellg() > 0)
     //    file->seekg(-1, std::ios::cur);
-    //}
 
     StackWord result(word, false);
     if (!word.empty() && word.back() == '"' && word.front() == '"') {
@@ -62,10 +59,13 @@ void StackFile::PushWord(const StackWord& word) {
     if (!file || !file->good())
         return;
 
+    if (Size() > 0)
+        *file << Separator;
+
     if (word.Literal)
-        *file << Separator << '"' << word.Word << '"';
+        *file << '"' << word.Word << '"';
     else
-        *file << Separator << word.Word;
+        *file << word.Word;
 }
 
 void StackFile::Halt() {
