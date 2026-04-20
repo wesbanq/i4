@@ -6,7 +6,7 @@ StackFile::StackFile(const IRunner& fs, std::filesystem::path filename)
     : Fs(fs), Filename(std::move(filename)) { }
 
 RunnerOpenStream StackFile::GetFile() const {
-    return Fs.open(Filename, std::ios::in | std::ios::out | std::ios::binary | std::ios::ate);
+    return Fs.open(Filename, std::ios::in | std::ios::out | std::ios::binary | std::ios::ate | std::ios::app);
 }
 
 std::pair<StackWord, unsigned int> StackFile::PeekWord() const {

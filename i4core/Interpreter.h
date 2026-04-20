@@ -15,7 +15,7 @@ private:
 	std::filesystem::path WorkDir;
 	std::filesystem::path CodeFilePath;
 	StackFile CodeFile;
-	StackFile StackFile;
+	StackFile DataFile;
 public:
 	Interpreter(const IRunner& fs, std::filesystem::path mainFile, std::ostream& outputStream,
 	            unsigned char options);
