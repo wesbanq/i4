@@ -5,6 +5,7 @@
 #include <iostream>
 #include <iterator>
 #include <optional>
+#include <vector>
 
 namespace {
 
@@ -188,9 +189,73 @@ void Interpreter::Step() {
 		DataFile << top;
 		return;
 	}
-	if (word.Word == Words::Reverse) {
+	if (word.Word == Words::Length) {
 		auto top = DataFile.PopWord();
 		DataFile << StackWord(std::to_string(top.Word.length()), false);
+		return;
+	}
+	if (word.Word == Words::Index) {
+		auto idx = DataFile.PopWord();
+		auto str = DataFile.PopWord();
+		auto idxNum = ParsedNum(idx.Word);
+		if (idxNum.kind == NumKind::NaN)
+			return;
+
+		auto newStr = str.Word[(idxNum.i > 0 ? idxNum.i % str.Word.length() : str.Word.length() % (str.Word.length() - -idxNum.i))];
+
+		DataFile << StackWord(std::to_string(newStr), true);
+		return;
+	}
+	if (word.Word == Words::Slice) {
+		auto start = DataFile.PopWord();
+		auto end = DataFile.PopWord();
+		auto str = DataFile.PopWord();
+
+		auto startNum = ParsedNum(start.Word);
+		auto endNum = ParsedNum(end.Word);
+
+		if (str.Word.empty())
+			return;
+
+		if (startNum.kind == NumKind::NaN)
+			startNum = ParsedNum("0");
+		if (endNum.kind == NumKind::NaN)
+			endNum = ParsedNum(std::to_string(str.Word.length()));
+
+		auto newStr = str.Word.substr(startNum.i, endNum.i - startNum.i);
+
+		DataFile << StackWord(std::move(newStr), true);
+
+		return;
+	}
+	if (word.Word == Words::Split) {
+		auto sep = DataFile.PopWord();
+		auto str = DataFile.PopWord();
+
+		if (sep.Word.empty()) {
+			for (auto it = str.Word.rbegin(); it != str.Word.rend(); ++it)
+				DataFile << StackWord(std::string(1, *it), true);
+			return;
+		}
+
+		const char delim = sep.Word[0];
+		std::vector<std::string> parts;
+		std::string collect;
+		collect.reserve(str.Word.size());
+
+		for (char c : str.Word) {
+			if (c == delim) {
+				parts.push_back(std::move(collect));
+				collect.clear();
+			} else {
+				collect.push_back(c);
+			}
+		}
+		parts.push_back(std::move(collect));
+
+		for (auto it = parts.rbegin(); it != parts.rend(); ++it)
+			DataFile << StackWord(std::move(*it), true);
+
 		return;
 	}
 	if (word.Word == Words::Halt) {

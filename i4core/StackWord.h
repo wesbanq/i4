@@ -17,6 +17,8 @@ namespace Words {
     inline static constexpr std::string_view Reverse        = "<>";
     inline static constexpr std::string_view Length         = "#";
     inline static constexpr std::string_view Index          = "@";
+    inline static constexpr std::string_view Slice          = "[:]";
+    inline static constexpr std::string_view Split          = "!s";
     inline static constexpr std::string_view Halt           = "!tlh";
     inline static constexpr std::string_view Get            = "teg";
     inline static constexpr std::string_view Post           = "tsop";
