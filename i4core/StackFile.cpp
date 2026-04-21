@@ -9,6 +9,15 @@ RunnerOpenStream StackFile::GetFile() const {
     return Fs.open(Filename, std::ios::in | std::ios::out | std::ios::binary | std::ios::ate | std::ios::app);
 }
 
+unsigned int StackFile::SkipSeparator(RunnerOpenStream& file) {
+    unsigned int length = 0;
+    while (file->tellg() > 0 && StackWord::IsSeparator(file->peek())) {
+        file->seekg(-1, std::ios::cur);
+        ++length;
+    }
+    return length;
+}
+
 std::pair<StackWord, unsigned int> StackFile::PeekWord() const {
     auto file = GetFile();
     if (!file || !file->good())
@@ -17,14 +26,17 @@ std::pair<StackWord, unsigned int> StackFile::PeekWord() const {
     const auto size = Size();
     if (size <= 0)
         return {{ "", false }, 0};
+    unsigned int length = SkipSeparator(file);
 
     file->seekg(-1, std::ios::end);
     std::string word;
-    auto endChar = StackWord::Separator;
     bool escaping = false;
-    while (file->peek() != endChar || escaping) {
-        if (word.length() == 0 && endChar != StackWord::Quote && file->peek() == StackWord::Quote) {
-            endChar = StackWord::Quote;
+    bool quoted = false;
+    while (
+        (quoted ? file->peek() != StackWord::Quote : !StackWord::IsSeparator(file->peek())) 
+        || escaping) {
+        if (word.length() == 0 && !quoted && file->peek() == StackWord::Quote) {
+            quoted = true;
             file->seekg(-1, std::ios::cur);
             continue;
         }
@@ -37,19 +49,16 @@ std::pair<StackWord, unsigned int> StackFile::PeekWord() const {
         file->seekg(-1, std::ios::cur);
     }
 
-    unsigned int length = word.length();
+    length += word.length();
     StackWord result(word, false);
 
-    if (endChar != StackWord::Separator && file->peek() == StackWord::Quote) {
+    if (quoted && file->peek() == StackWord::Quote) {
         result.Literal = true;
         length += 2;
         file->seekg(-1, std::ios::cur);
     }
 
-    while (file->tellg() > 0 && file->peek() == StackWord::Separator) {
-        file->seekg(-1, std::ios::cur);
-        ++length;
-    }
+    length += SkipSeparator(file);
 
     return { result, length };
 }
@@ -66,7 +75,7 @@ void StackFile::PushWord(const StackWord& word) {
         return;
 
     if (Size() > 0)
-        *file << StackWord::Separator;
+        *file << ' ';
     *file << word.Format();
 }
 
@@ -101,7 +110,7 @@ StackFile& StackFile::operator<<(const StackFile& src) {
     auto out = Fs.open(Filename, std::ios::out | std::ios::binary | std::ios::app);
     if (!out || !out->good())
         return *this;
-    *out << StackWord::Separator << in->rdbuf();
+    *out << ' ' << in->rdbuf();
     return *this;
 }
 

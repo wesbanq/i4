@@ -52,9 +52,25 @@ struct StackWord {
     std::string Word;
     bool Literal;
 
-    static constexpr auto Separator = ' ';
     static constexpr auto EscapeChar = '\\';
     static constexpr auto Quote = '"';
+    static constexpr auto Separator = ' ';
+
+    static constexpr bool IsSeparator(char c) { 
+        switch (c) {
+            case Separator:
+                return true;
+            case '\n':
+                return true;
+            case '\r':
+                return true;
+            case '\t':
+                return true;
+            default:
+                return false;
+        }
+    }
+
 
     StackWord();
     StackWord(std::string word, bool literal = false) : Word(std::move(word)), Literal(literal) { }

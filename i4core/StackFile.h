@@ -10,6 +10,7 @@ private:
     std::filesystem::path Filename;
 
     RunnerOpenStream GetFile() const;
+    static unsigned int SkipSeparator(RunnerOpenStream& file);
 public:
     static constexpr std::string_view CodeExtension = ".i4";
     static constexpr std::string_view StackExtension = ".i4s";
