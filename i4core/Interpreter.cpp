@@ -390,63 +390,7 @@ void Interpreter::Step() {
 		});
 		return;
 	}
-	if (word.Word == Words::BitAnd) {
-		doBinaryArithmetic([this](const ParsedNum& lhs, const ParsedNum& rhs) {
-			DataFile << ToStackWord(lhs.i & rhs.i);
-		});
-		return;
-	}
-	if (word.Word == Words::BitOr) {
-		doBinaryArithmetic([this](const ParsedNum& lhs, const ParsedNum& rhs) {
-			DataFile << ToStackWord(lhs.i | rhs.i);
-		});
-		return;
-	}
-	if (word.Word == Words::BitXor) {
-		doBinaryArithmetic([this](const ParsedNum& lhs, const ParsedNum& rhs) {
-			DataFile << ToStackWord(lhs.i ^ rhs.i);
-		});
-		return;
-	}
-	if (word.Word == Words::BitNot) {
-		auto top = DataFile.PopWord();
-		if (top.Word.empty())
-			return;
-		DataFile << ToStackWord(~ParsedNum(top.Word).i);
-		return;
-	}
-	if (word.Word == Words::LogicAnd) {
-		doBinaryArithmetic([this](const ParsedNum& lhs, const ParsedNum& rhs) {
-			DataFile << ToStackWord(lhs.i && rhs.i);
-		});
-		return;
-	}
-	if (word.Word == Words::LogicOr) {
-		doBinaryArithmetic([this](const ParsedNum& lhs, const ParsedNum& rhs) {
-			DataFile << ToStackWord(lhs.i || rhs.i);
-		});
-		return;
-	}
-	if (word.Word == Words::LogicNot) {
-		auto top = DataFile.PopWord();
-		if (top.Word.empty())
-			return;
-		DataFile << StackWord(std::to_string(!ParsedNum(top.Word).i), false);
-		return;
-	}
-	if (word.Word == Words::Shl) {
-		doBinaryArithmetic([this](const ParsedNum& lhs, const ParsedNum& rhs) {
-			DataFile << ToStackWord(lhs.i << rhs.i);
-		});
-		return;
-	}
-	if (word.Word == Words::Shr) {
-		doBinaryArithmetic([this](const ParsedNum& lhs, const ParsedNum& rhs) {
-			DataFile << ToStackWord(lhs.i >> rhs.i);
-		});
-		return;
-	}
-
+	
 	if (!HasOption(Option::NOWEB)) {
 		auto doHttp = [this](std::string_view method) {
 			auto payload = DataFile.PopWord();

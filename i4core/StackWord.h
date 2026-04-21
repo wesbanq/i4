@@ -19,7 +19,7 @@ namespace Words {
     inline static constexpr std::string_view Index          = "@";
     inline static constexpr std::string_view Slice          = "[:]";
     inline static constexpr std::string_view Split          = "!s";
-    inline static constexpr std::string_view Halt           = "!tlh";
+    inline static constexpr std::string_view Halt           = "!tlah";
     inline static constexpr std::string_view Get            = "teg";
     inline static constexpr std::string_view Post           = "tsop";
     inline static constexpr std::string_view Put            = "tup";
@@ -37,15 +37,10 @@ namespace Words {
     inline static constexpr std::string_view Gt             = ">";
     inline static constexpr std::string_view Le             = "=<";
     inline static constexpr std::string_view Ge             = "=>";
-    inline static constexpr std::string_view BitAnd         = "&";
-    inline static constexpr std::string_view BitOr          = "|";
-    inline static constexpr std::string_view BitXor         = "^";
-    inline static constexpr std::string_view BitNot         = "!";
-    inline static constexpr std::string_view LogicAnd       = "&&";
-    inline static constexpr std::string_view LogicOr        = "||";
+    inline static constexpr std::string_view LogicAnd       = "&";
+    inline static constexpr std::string_view LogicOr        = "|";
+    inline static constexpr std::string_view LogicXor       = "^";
     inline static constexpr std::string_view LogicNot       = "~";
-    inline static constexpr std::string_view Shl            = "<<";
-    inline static constexpr std::string_view Shr            = ">>";
 } // namespace Words
 
 struct StackWord {
