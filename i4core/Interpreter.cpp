@@ -70,7 +70,7 @@ void Interpreter::PushProgramArgs(const std::vector<std::string>& args) {
 }
 
 std::string Interpreter::PopFinalResult() {
-	auto lastWord = DataFile.PopWord().Word;
+	auto lastWord = DataFile.PopWord().Escape();
 	
 	if (lastWord == "")
 		lastWord = "OK";
@@ -100,12 +100,13 @@ void Interpreter::Step() {
 	}
 
 	if (word.Word == Words::Def) {
-		auto meaning = DataFile.PopWord();
 		auto name = DataFile.PopWord();
-		if (name.Word.empty() || meaning.Word.empty())
+		auto meaning = DataFile.PopWord();
+		if (name.Word.empty())
 			return;
 		
 		auto defFile = StackFile::Find(Fs, CodeFilePath, name.Word, StackFile::DefExtension);
+		meaning.Word = meaning.Escape();
 		meaning.Literal = false;
 		defFile << meaning;
 
@@ -113,9 +114,6 @@ void Interpreter::Step() {
 	}
 	if (word.Word == Words::Label) {
 		auto name = DataFile.PopWord();
-		if (name.Word.empty())
-			return;
-		
 		auto labelFile = StackFile::Find(Fs, CodeFilePath, name.Word, StackFile::LabelExtension);
 		labelFile << CodeFile;
 
@@ -128,24 +126,27 @@ void Interpreter::Step() {
 		CodeFile << StackFile::Find(Fs, CodeFilePath, name.Word, StackFile::LabelExtension);
 		return;
 	}
-	if (word.Word == Words::Exec) {
+	if (word.Word == Words::Inject) {
 		auto name = DataFile.PopWord();
-		if (name.Word.empty())
-			return;
-		CodeFile << StackFile::Find(Fs, CodeFilePath, name.Word, StackFile::DefExtension);
+		name.Word = name.Escape();
+		name.Literal = false;
+		CodeFile << name;
+		return;
+	}
+	if (word.Word == Words::Consume) {
+		auto word = CodeFile.PopWord();
+		DataFile << word;
 		return;
 	}
 	if (word.Word == Words::Out) {
 		auto top = DataFile.PopWord();
-		if (top.Word.empty())
-			return;
-		OutputStream << top.Word;
+		OutputStream << top.Escape();
 		return;
 	}
 	if (word.Word == Words::In) {
+		std::cout << "? ";
 		std::string line;
-		if (!std::getline(std::cin, line))
-			return;
+		std::cin >> line;
 		DataFile << StackWord(std::move(line), true);
 		return;
 	}
@@ -153,9 +154,7 @@ void Interpreter::Step() {
 	if (!HasOption(Option::NOFS)) {
 		if (word.Word == Words::Open) {
 			auto pathWord = DataFile.PopWord();
-			if (pathWord.Word.empty())
-				return;
-			std::filesystem::path path(pathWord.Word);
+			std::filesystem::path path(pathWord.Escape());
 			if (path.is_relative())
 				path = WorkDir / path;
 			if (!Fs.exists(path))
@@ -177,7 +176,7 @@ void Interpreter::Step() {
 		DataFile << top;
 		return;
 	}
-	if (word.Word == Words::Drop) {
+	if (word.Word == Words::Pop) {
 		auto top = DataFile.PopWord();
 		(void)top;
 		return;
@@ -187,6 +186,15 @@ void Interpreter::Step() {
 		if (top.Word.empty())
 			return;
 		DataFile << top;
+		return;
+	}
+	if (word.Word == Words::Reverse) {
+		auto top = DataFile.PopWord();
+		DataFile << StackWord(std::to_string(top.Word.length()), false);
+		return;
+	}
+	if (word.Word == Words::Halt) {
+		CodeFile.Halt();
 		return;
 	}
 
