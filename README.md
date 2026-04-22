@@ -35,7 +35,7 @@ String literals are wrapped in quotes and pushed to the data stack as-is. Anythi
 **An if statement definition**
 
 ```python
-def >< if "udef \"\cond\"\ udef true udef \"\false\"\ << != 0 cond def >< cond asstr def true asstr def false asstr" 
+def >< if "udef \"\cond\"\ udef true udef false << != 0 cond def >< cond asstr def true asstr def false asstr" 
 def >< udef "def ~~ asstr" def >< asstr "[:] ee" def ee "e e" def e "\"\\"\"
 def >< true "1" def >< false "0"
 ```
@@ -43,7 +43,7 @@ def >< true "1" def >< false "0"
 **Truth machine**
 
 ```python
-if "~= false" "^: l . true : l" ". false" ? def >< true "1" def >< false "0"
+if "~= false" "loop \"\. true\"\" ". false" ? def >< loop "^: l inner : l def \"\inner\"\ asstr"
 ```
 
 ---
@@ -56,24 +56,29 @@ the same as in the code stack's file.
 
 |Instruction|Explanation|
 |---|---|
-|`def <name> <meaning>`					|When encountering a non-literal string <name>, put <meaning> on the code stack escaped																	|
-|`: <name>`						|Create a new label	 	 																							|
-|`^: <name>`						|Replace the contents of the code stack, with the code in the label file	  																	|
-|`. <str>`						|Pop <str> and print it																									|
-|`?`							|Put user input on top of the data stack		 																				|
-|`~~ <s>`						|Duplicates \<s> and puts it on top of the data stack																					|
-|`# <str>`						|Put the length of <str> on top of the data stack																					|
-|`@ <idx>`						|Put the character at <idx> of the string on top of the data stack. <id> wraps around the string if the index is out of bounds. Puts an empty string if stack is empty.	 						|
-|`>< <std>`						|Pops <str> and puts reversed on the data stack		 																				|
-|`s! <sep> <str>`					|Split the <str> by <sep>, if <sep> is empty - split by character instead																		|
-|`p! <s>`						|Pops \<s> off the data stack																								|
-|`[:] <start> <end> <str>`				|Puts a copy of <str> on top of the data stack, starting at <start> and ending at <end>. Has the same index wrapping behavior as `@`. If <start> or <end> is NaN, put a copy of the string as a literal on the stack	|
-|`get <addr>`						|Does an HTTP GET request, puts response on the data stack																				|
-|`post/put/patch/delete/options <addr> <payload>`	|Does their corresponding HTTP request																							|
-|`=/~=/>/</>=/<= <lhs> <rhs>`				|Compares, exactly as you would expect																							|
-|`&/\|/~/^ <lhs> <rhs>`					|Logic instructions. Every non-zero value or non-empty string is treated as true																	|
-|`+/-/*///%/** <lhs> <rhs>`				|Take a guess																										|
-|`halt!`						|Halt (delete the whole code stack)																							|
+|`def <name> <meaning>`					|When encountering a non-literal string <name>, put <meaning> on the code stack|
+|`: <name>`						|Create a new|
+|`^: <name>`						|Replace the contents of the code stack, with the code in the label|
+|`. <str>`						|Pop <str> and print|
+|`?`							|Put user input on top of the data|
+|`~~ <s>`						|Duplicates \<s> and puts it on top of the data|
+|`# <str>`						|Put the length of <str> on top of the data|
+|`@ <idx>`						|Put the character at <idx> of the string on top of the data stack. <id> wraps around the string if the index is out of bounds. Puts an empty string if stack is empty.|
+|`>< <std>`						|Pops <str> and puts reversed on the data|
+|`spl <sep> <str>`					|Split the <str> by <sep>, if <sep> is empty - split by character|
+|`p <s>`						|Pops \<s> off the data|
+|`[:] <start> <end> <str>`				|Puts a copy of <str> on top of the data stack, starting at <start> and ending at <end>. Has the same index wrapping behavior as `@`. If <start> or <end> is NaN, put a copy of the string as a literal on the stack|
+|`<< <str>`						|Puts <str> on top of the code|
+|`>>`							|Takes the string off the top of the code stack, and puts it on top of the data|
+|`<> <str>`						|Swaps the top of the code and data stacks|
+|`open <filename>`              |Pastes the entire content of <filename> into the data stack backwards. Puts empty string if file was not found, or an error happened|
+|`get <addr>`						|Does an HTTP GET request, puts response on the data stack|
+|`post/put/patch/delete/options <addr> <payload>`	|Does the corresponding HTTP request, puts the response on the data stack|
+|`=/~=/>/</>=/<= <lhs> <rhs>`				|Compares|
+|`&/\|/^ <lhs> <rhs>`					|Logic instructions. Every non-zero value or non-empty string is treated as true|
+|`~ <str>`					            |Logic not|
+|`+/-/*///%/** <lhs> <rhs>`				|Take a guess|
+|`halt`						|Halt (delete the whole code)|
 
 ---
 

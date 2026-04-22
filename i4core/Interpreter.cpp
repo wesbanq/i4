@@ -139,6 +139,13 @@ void Interpreter::Step() {
 		DataFile << word;
 		return;
 	}
+	if (word.Word == Words::Swap) {
+		auto codeTop = CodeFile.PopWord();
+		auto dataTop = DataFile.PopWord();
+		CodeFile << dataTop;
+		DataFile << codeTop;
+		return;
+	}
 	if (word.Word == Words::Out) {
 		auto top = DataFile.PopWord();
 		OutputStream << top.Escape();
@@ -150,23 +157,6 @@ void Interpreter::Step() {
 		std::cin >> line;
 		DataFile << StackWord(std::move(line), true);
 		return;
-	}
-
-	if (!HasOption(Option::NOFS)) {
-		if (word.Word == Words::Open) {
-			auto pathWord = DataFile.PopWord();
-			std::filesystem::path path(pathWord.Escape());
-			if (path.is_relative())
-				path = WorkDir / path;
-			if (!Fs.exists(path))
-				return;
-			auto in = Fs.open(path, std::ios::in | std::ios::binary);
-			if (!in || !in->good())
-				return;
-			std::string content((std::istreambuf_iterator<char>(*in)), std::istreambuf_iterator<char>());
-			DataFile << StackWord(std::move(content), true);
-			return;
-		}
 	}
 	
 	if (word.Word == Words::Dupe) {
@@ -268,9 +258,9 @@ void Interpreter::Step() {
 		auto lhsW = DataFile.PopWord();
 
 		if (rhsW.Word.empty())
-			rhsW = StackWord("0", false);
+			rhsW = StackWord("0", true);
 		if (lhsW.Word.empty())
-			lhsW = StackWord("0", false);
+			lhsW = StackWord("0", true);
 
 		auto rhs = ParsedNum(rhsW.Word);
 		auto lhs = ParsedNum(lhsW.Word);
@@ -390,7 +380,67 @@ void Interpreter::Step() {
 		});
 		return;
 	}
+
+	auto doLogic = [this](auto op) {
+		auto rhs = DataFile.PopWord();
+		auto lhs = DataFile.PopWord();
+		if (lhs.Word.empty() || rhs.Word.empty())
+			lhs = StackWord("0", true);
+		if (rhs.Word.empty())
+			rhs = StackWord("0", true);
+		auto lhsNum = ParsedNum(lhs.Word);
+		auto rhsNum = ParsedNum(rhs.Word);
+		if (lhsNum.kind == NumKind::NaN)
+			lhsNum = ParsedNum("0");
+		if (rhsNum.kind == NumKind::NaN)
+			rhsNum = ParsedNum("0");
+		op(lhsNum, rhsNum);
+	};
+
+	if (word.Word == Words::LogicAnd) {
+		doLogic([this](const ParsedNum& lhs, const ParsedNum& rhs) {
+			DataFile << ToStackWord(bool(lhs.i) && bool(rhs.i) ? 1 : 0);
+		});
+		return;
+	}
+	if (word.Word == Words::LogicOr) {
+		doLogic([this](const ParsedNum& lhs, const ParsedNum& rhs) {
+			DataFile << ToStackWord(bool(lhs.i) || bool(rhs.i) ? 1 : 0);
+		});
+		return;
+	}
+	if (word.Word == Words::LogicXor) {
+		doLogic([this](const ParsedNum& lhs, const ParsedNum& rhs) {
+			DataFile << ToStackWord(bool(lhs.i) ^ bool(rhs.i) ? 1 : 0);
+		});
+		return;
+	}
+	if (word.Word == Words::LogicNot) {
+		auto top = DataFile.PopWord();
+		auto topNum = ParsedNum(top.Word);
+		if (topNum.kind == NumKind::NaN)
+			topNum = ParsedNum("0");
+		DataFile << ToStackWord(!bool(topNum.i) ? 1 : 0);
+		return;
+	}
 	
+	if (!HasOption(Option::NOFS)) {
+		if (word.Word == Words::Open) {
+			auto pathWord = DataFile.PopWord();
+			std::filesystem::path path(pathWord.Escape());
+			if (path.is_relative())
+				path = WorkDir / path;
+			if (!Fs.exists(path))
+				return;
+			auto in = Fs.open(path, std::ios::in | std::ios::binary);
+			if (!in || !in->good())
+				return;
+			std::string content((std::istreambuf_iterator<char>(*in)), std::istreambuf_iterator<char>());
+			DataFile << StackWord(std::move(content), true);
+			return;
+		}
+	}
+
 	if (!HasOption(Option::NOWEB)) {
 		auto doHttp = [this](std::string_view method) {
 			auto payload = DataFile.PopWord();
