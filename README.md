@@ -36,7 +36,7 @@ String literals are wrapped in quotes and pushed to the data stack as-is. Anythi
 
 ```python
 def >< if "udef \"\cond\"\ udef true udef false << != 0 cond def >< cond asstr def true asstr def false asstr" 
-def >< udef "def ~~ asstr" def >< asstr "[:] ee" def ee "e e" def e "\"\\"\"
+def >< udef "def ~~ asstr" def >< asstr "<< [:] ee" def ee "e e" def e "\"\\"\"
 def >< true "1" def >< false "0"
 ```
 

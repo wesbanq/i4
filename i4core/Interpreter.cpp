@@ -181,7 +181,7 @@ void Interpreter::Step() {
 	}
 	if (word.Word == Words::Length) {
 		auto top = DataFile.PopWord();
-		DataFile << StackWord(std::to_string(top.Word.length()), false);
+		DataFile << StackWord(std::to_string(top.Word.length()), true);
 		return;
 	}
 	if (word.Word == Words::Index) {

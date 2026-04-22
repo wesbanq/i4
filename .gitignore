@@ -55,3 +55,6 @@ x64/
 *.slnx
 *.sln
 .vs/
+.clangd
+*.txt
+*.h.in
