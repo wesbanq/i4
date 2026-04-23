@@ -2,6 +2,28 @@
 #include "IRunner.h"
 #include <iostream>
 
+namespace {
+
+/// With the get position on a double quote, count consecutive backslashes immediately before it in the file.
+unsigned countConsecutiveBackslashesBeforeQuote(std::istream& file) {
+    const auto quotePos = file.tellg();
+    unsigned n = 0;
+    if (quotePos <= std::streampos(0))
+        return 0;
+    file.seekg(-1, std::ios::cur);
+    while (static_cast<char>(file.peek()) == StackWord::EscapeChar) {
+        ++n;
+        if (file.tellg() == std::streampos(0))
+            break;
+        file.seekg(-1, std::ios::cur);
+    }
+    file.clear();
+    file.seekg(quotePos);
+    return n;
+}
+
+} // namespace
+
 StackFile::StackFile(const IRunner& fs, std::filesystem::path filename)
     : Fs(fs), Filename(std::move(filename)) { }
 
@@ -32,20 +54,49 @@ std::pair<StackWord, unsigned int> StackFile::PeekWord() const {
     std::string word;
     bool escaping = false;
     bool quoted = false;
-    while (
-        (quoted ? file->peek() != StackWord::Quote : !StackWord::IsSeparator(file->peek())) 
-        || escaping) {
-        if (word.length() == 0 && !quoted && file->peek() == StackWord::Quote) {
-            quoted = true;
+    while (true) {
+        const int ich = file->peek();
+        if (ich == std::char_traits<char>::eof())
+            break;
+
+        if (!quoted) {
+            if (!escaping && StackWord::IsSeparator(static_cast<char>(ich)))
+                break;
+
+            if (word.length() == 0 && static_cast<char>(ich) == StackWord::Quote) {
+                quoted = true;
+                if (file->tellg() == std::streampos(0))
+                    break;
+                file->seekg(-1, std::ios::cur);
+                continue;
+            }
+
+            if (static_cast<char>(ich) == StackWord::EscapeChar)
+                escaping = !escaping;
+
+            word.push_back(static_cast<char>(ich));
+            if (file->tellg() == std::streampos(0))
+                break;
             file->seekg(-1, std::ios::cur);
             continue;
         }
 
-        if (file->peek() == StackWord::EscapeChar)
-            escaping = !escaping;
+        // Quoted literal: only an unescaped " (even \ count before it) ends the scan; \\ toggles are wrong for \\\.
+        if (static_cast<char>(ich) == StackWord::Quote) {
+            const unsigned bs = countConsecutiveBackslashesBeforeQuote(*file);
+            if (bs % 2 == 1) {
+                word.push_back(StackWord::Quote);
+                if (file->tellg() == std::streampos(0))
+                    break;
+                file->seekg(-1, std::ios::cur);
+                continue;
+            }
+            break;
+        }
 
-        word.push_back(file->peek());
-        if (file->tellg() == 0) break;
+        word.push_back(static_cast<char>(ich));
+        if (file->tellg() == std::streampos(0))
+            break;
         file->seekg(-1, std::ios::cur);
     }
 
