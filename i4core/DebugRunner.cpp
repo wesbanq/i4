@@ -1,6 +1,7 @@
 #include "DebugRunner.h"
 #include "Interpreter.h"
 #include "Option.h"
+#include "Runner.h"
 #include "StackFile.h"
 #include <filesystem>
 #include <fstream>
@@ -77,6 +78,21 @@ public:
 
 void deleteDebugStream(std::iostream* p) {
     delete static_cast<DebugStream*>(p);
+}
+
+void removeVirtualFilesUnder(std::map<std::filesystem::path, std::string>& files,
+                             const std::filesystem::path& boxDir) {
+    const auto boxNorm = normalizePath(boxDir);
+    const std::string boxStr = boxNorm.generic_string();
+    const std::string prefix = boxStr.empty() ? boxStr : boxStr + '/';
+
+    for (auto it = files.begin(); it != files.end();) {
+        const std::string k = normalizePath(it->first).generic_string();
+        if (k == boxStr || (k.size() > prefix.size() && k.compare(0, prefix.size(), prefix) == 0))
+            it = files.erase(it);
+        else
+            ++it;
+    }
 }
 
 } // namespace
@@ -194,7 +210,9 @@ std::string DebugRunner::Start(std::filesystem::path mainFile,
     std::filesystem::path runPath = std::move(mainFile);
     if (Interpreter::HasOption(options, Option::BOX)) {
         const std::filesystem::path parent = runPath.parent_path();
-        const std::filesystem::path boxDir = parent / runPath.stem();
+        const std::filesystem::path boxDir =
+            parent / (runPath.stem().string() + std::string(Runner::BoxDirectorySuffix));
+        removeVirtualFilesUnder(files, boxDir);
         const std::filesystem::path boxedMain = boxDir / runPath.filename();
         const std::filesystem::path fromKey = normalizePath(runPath);
         auto it = files.find(fromKey);

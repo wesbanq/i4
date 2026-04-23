@@ -92,8 +92,8 @@ void Interpreter::Step() {
 	if (HasOption(Option::VERBOSE))
 		std::cout << word.Format() << '\n';
 
-	if (word.Word.empty())
-		return;
+	// if (word.Word.empty())
+	// 	return;
 	
 	if (word.Literal) {
 		DataFile << word;
@@ -103,8 +103,8 @@ void Interpreter::Step() {
 	if (word.Word == Words::Def) {
 		auto name = DataFile.PopWord();
 		auto meaning = DataFile.PopWord();
-		if (name.Word.empty())
-			return;
+		// if (name.Word.empty())
+		// 	return;
 		
 		auto defFile = StackFile::Find(Fs, CodeFilePath, name.Word, StackFile::DefExtension);
 		meaning.Word = meaning.Escape();
@@ -122,8 +122,8 @@ void Interpreter::Step() {
 	}
 	if (word.Word == Words::Jump) {
 		auto name = DataFile.PopWord();
-		if (name.Word.empty())
-			return;
+		// if (name.Word.empty())
+		// 	return;
 		CodeFile << StackFile::Find(Fs, CodeFilePath, name.Word, StackFile::LabelExtension);
 		return;
 	}
@@ -161,8 +161,8 @@ void Interpreter::Step() {
 	
 	if (word.Word == Words::Dupe) {
 		auto top = DataFile.PopWord();
-		if (top.Word.empty())
-			return;
+		// if (top.Word.empty())
+		// 	return;
 		DataFile << top;
 		DataFile << top;
 		return;
@@ -174,8 +174,8 @@ void Interpreter::Step() {
 	}
 	if (word.Word == Words::Reverse) {
 		auto top = DataFile.PopWord();
-		if (top.Word.empty())
-			return;
+		// if (top.Word.empty())
+		// 	return;
 		DataFile << top;
 		return;
 	}

@@ -72,7 +72,7 @@ StackWord StackFile::PopWord() {
 void StackFile::PushWord(const StackWord& word) {
     auto file = GetFile();
     if (!file || !file->good())
-        return;
+        throw std::runtime_error("Failed to open stack file: " + Filename.string());
 
     if (Size() > 0)
         *file << ' ';
@@ -91,11 +91,13 @@ std::filesystem::path StackFile::GetPath() const {
     return Filename;
 }
 
-StackFile StackFile::Find(const IRunner& fs, const std::filesystem::path& base, const std::string_view name,
+StackFile StackFile::Find(const IRunner& fs, 
+                          const std::filesystem::path& base, 
+                          const std::string_view name,
                           const std::string_view ext) {
     std::filesystem::path p(base);
-    p.replace_extension(ext);
-    return StackFile(fs, p / name);
+    p.replace_extension(std::string(ext) + std::string(name));
+    return StackFile(fs, p);
 }
 
 StackFile& StackFile::operator<<(const StackWord& word) {

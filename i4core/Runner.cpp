@@ -49,7 +49,10 @@ std::string Runner::Start(std::filesystem::path mainFile,
     std::filesystem::path runPath = std::move(mainFile);
     if (Interpreter::HasOption(options, Option::BOX)) {
         const std::filesystem::path parent = runPath.parent_path();
-        const std::filesystem::path boxDir = parent / runPath.stem();
+        const std::filesystem::path boxDir =
+            parent / (runPath.stem().string() + std::string(BoxDirectorySuffix));
+        if (std::filesystem::exists(boxDir))
+            std::filesystem::remove_all(boxDir);
         std::filesystem::create_directories(boxDir);
         const std::filesystem::path boxedMain = boxDir / runPath.filename();
         std::filesystem::copy_file(runPath, boxedMain, std::filesystem::copy_options::overwrite_existing);

@@ -2,6 +2,7 @@
 
 #include "IRunner.h"
 #include <filesystem>
+#include <string_view>
 #include <vector>
 
 class Runner final : public IRunner {
@@ -9,6 +10,7 @@ private:
     void enforceSafeCodeFileBudget(const std::filesystem::path& mainFile) const;
 public:
     static constexpr unsigned SafeCodeFilesLimitMb = 16;
+    static constexpr std::string_view BoxDirectorySuffix = ".i4box";
 
     bool exists(const std::filesystem::path& path) const override;
     void resize_file(const std::filesystem::path& path, std::uintmax_t size) const override;
