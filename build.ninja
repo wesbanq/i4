@@ -45,9 +45,10 @@ build $builddir/i4core/HttpClient.o: cxx i4core/HttpClient.cpp
 build $builddir/i4core/Runner.o: cxx i4core/Runner.cpp
 build $builddir/i4core/DebugRunner.o: cxx i4core/DebugRunner.cpp
 build $builddir/i4core/StackFile.o: cxx i4core/StackFile.cpp
+build $builddir/i4core/StackWord.o: cxx i4core/StackWord.cpp
 build $builddir/i4cli/Main.o: cxx i4cli/Main.cpp | $builddir/I4Version.h
 
-build $builddir/i4core/libi4core.a: ar $builddir/i4core/Interpreter.o $builddir/i4core/HttpClient.o $builddir/i4core/Runner.o $builddir/i4core/DebugRunner.o $builddir/i4core/StackFile.o
+build $builddir/i4core/libi4core.a: ar $builddir/i4core/Interpreter.o $builddir/i4core/HttpClient.o $builddir/i4core/Runner.o $builddir/i4core/DebugRunner.o $builddir/i4core/StackFile.o $builddir/i4core/StackWord.o
 
 build $builddir/i4.exe: link $builddir/i4cli/Main.o $builddir/i4core/libi4core.a
 
