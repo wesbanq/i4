@@ -167,7 +167,10 @@ StackFile& StackFile::operator<<(const StackFile& src) {
     auto out = Fs.open(Filename, std::ios::out | std::ios::binary | std::ios::app);
     if (!out || !out->good())
         return *this;
-    *out << ' ' << in->rdbuf();
+
+    if (Size() > 0)
+        *out << ' ';
+    *out << in->rdbuf();
     return *this;
 }
 
