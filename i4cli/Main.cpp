@@ -2,6 +2,7 @@
 #include "DebugRunner.h"
 #include "Interpreter.h"
 #include "Option.h"
+#include <exception>
 #include <filesystem>
 #include <string>
 #include <iostream>
@@ -127,19 +128,24 @@ int main(int argc, char* argv[]) {
 	}
 
 	std::string result;
-	if (Interpreter::HasOption(options, Option::MEMORY)) {
-		DebugRunner debugRunner = DebugRunner::fromFilesystemAround(filenames[0]);
-		std::error_code ec;
-		const std::filesystem::path cwd = std::filesystem::current_path();
-		const std::filesystem::path mainAbs = std::filesystem::weakly_canonical(filenames[0]);
-		std::filesystem::path mainPath = std::filesystem::relative(mainAbs, cwd, ec);
-		if (ec)
-			mainPath = std::filesystem::path(filenames[0]);
-		result = debugRunner.Start(mainPath, options, std::cout, programArgs);
-	} else {
-		result = runner.Start(filenames[0], options, std::cout, programArgs);
+	try {
+		if (Interpreter::HasOption(options, Option::MEMORY)) {
+			DebugRunner debugRunner = DebugRunner::fromFilesystemAround(filenames[0]);
+			std::error_code ec;
+			const std::filesystem::path cwd = std::filesystem::current_path();
+			const std::filesystem::path mainAbs = std::filesystem::weakly_canonical(filenames[0]);
+			std::filesystem::path mainPath = std::filesystem::relative(mainAbs, cwd, ec);
+			if (ec)
+				mainPath = std::filesystem::path(filenames[0]);
+			result = debugRunner.Start(mainPath, options, std::cout, programArgs);
+		} else {
+			result = runner.Start(filenames[0], options, std::cout, programArgs);
+		}
+		std::cout << "\nProgram finished with code: " << result << std::endl;
+	} catch (std::exception& e) {
+		std::cerr << "Error: " << e.what() << std::endl;
+		return 2;
 	}
-	std::cout << "\nProgram finished with code: " << result << std::endl;
 	
 	return result == "OK" ? 0 : 1;
 }
