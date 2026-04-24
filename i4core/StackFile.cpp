@@ -48,9 +48,20 @@ std::pair<StackWord, unsigned int> StackFile::PeekWord() const {
     const auto size = Size();
     if (size <= 0)
         return {{ "", false }, 0};
-    unsigned int length = SkipSeparator(file);
 
-    file->seekg(-1, std::ios::end);
+    file->seekg(0, std::ios::end);
+    if (file->tellg() <= std::streampos(0))
+        return {{ "", false }, 0};
+    file->seekg(-1, std::ios::cur);
+
+    unsigned int length = 0;
+    while (StackWord::IsSeparator(static_cast<char>(file->peek()))) {
+        ++length;
+        if (file->tellg() == std::streampos(0))
+            return {{ "", false }, length };
+        file->seekg(-1, std::ios::cur);
+    }
+
     std::string word;
     bool escaping = false;
     bool quoted = false;
@@ -81,7 +92,6 @@ std::pair<StackWord, unsigned int> StackFile::PeekWord() const {
             continue;
         }
 
-        // Quoted literal: only an unescaped " (even \ count before it) ends the scan; \\ toggles are wrong for \\\.
         if (static_cast<char>(ich) == StackWord::Quote) {
             const unsigned bs = countConsecutiveBackslashesBeforeQuote(*file);
             if (bs % 2 == 1) {
