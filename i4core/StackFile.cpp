@@ -1,5 +1,5 @@
 #include "StackFile.h"
-#include "IRunner.h"
+#include "IFileSystem.h"
 #include <iostream>
 
 namespace {
@@ -24,14 +24,14 @@ unsigned countConsecutiveBackslashesBeforeQuote(std::istream& file) {
 
 } // namespace
 
-StackFile::StackFile(const IRunner& fs, std::filesystem::path filename)
+StackFile::StackFile(const IFileSystem& fs, std::filesystem::path filename)
     : Fs(fs), Filename(std::move(filename)) { }
 
-RunnerOpenStream StackFile::GetFile() const {
+FileSystemOpenStream StackFile::GetFile() const {
     return Fs.open(Filename, std::ios::in | std::ios::out | std::ios::binary | std::ios::ate | std::ios::app);
 }
 
-unsigned int StackFile::SkipSeparator(RunnerOpenStream& file) {
+unsigned int StackFile::SkipSeparator(FileSystemOpenStream& file) {
     unsigned int length = 0;
     while (file->tellg() > 0 && StackWord::IsSeparator(file->peek())) {
         file->seekg(-1, std::ios::cur);
@@ -146,7 +146,7 @@ std::filesystem::path StackFile::GetPath() const {
     return Filename;
 }
 
-StackFile StackFile::Find(const IRunner& fs, 
+StackFile StackFile::Find(const IFileSystem& fs, 
                           const std::filesystem::path& base, 
                           const std::string_view name,
                           const std::string_view ext) {

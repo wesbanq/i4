@@ -1,6 +1,6 @@
 #include "Interpreter.h"
 #include "HttpClient.h"
-#include "IRunner.h"
+#include "IFileSystem.h"
 #include <charconv>
 #include <iostream>
 #include <iterator>
@@ -49,7 +49,7 @@ StackWord ToStackWord(T s) {
 
 } // namespace
 
-Interpreter::Interpreter(const IRunner& fs, 
+Interpreter::Interpreter(const IFileSystem& fs, 
 						 std::filesystem::path mainFile, 
 						 std::ostream& outputStream,
                          unsigned char options)
@@ -75,7 +75,7 @@ ReturnCode Interpreter::PopResult() {
 	const auto lastNum = ParsedNum(lastWord);
 	
 	if (lastNum.kind == NumKind::NaN)
-		return { lastWord, lastWord.empty() || lastWord == "OK" ? 0u : 1u };
+		return { lastWord.empty() ? "OK" : lastWord, lastWord.empty() || lastWord == "OK" ? 0u : 1u };
 	else
 		return { lastWord, static_cast<unsigned char>(lastNum.i) };
 }

@@ -1,18 +1,21 @@
 #pragma once
 
+#include "IFileSystem.h"
+#include "ReturnCode.h"
 #include <filesystem>
-#include <iostream>
-#include <memory>
+#include <iosfwd>
+#include <string_view>
+#include <vector>
 
-using RunnerOpenStream = std::unique_ptr<std::iostream, void (*)(std::iostream*)>;
-
-class IRunner {
+class IRunner : public IFileSystem {
 public:
-    virtual ~IRunner() = default;
+    static constexpr unsigned SafeCodeFilesLimitMb = 16;
+    static constexpr std::string_view BoxDirectorySuffix = ".i4box";
 
-    virtual bool exists(const std::filesystem::path& path) const = 0;
-    virtual void resize_file(const std::filesystem::path& path, std::uintmax_t size) const = 0;
-    virtual RunnerOpenStream open(const std::filesystem::path& path,
-                                  std::ios::openmode mode) const = 0;
-    virtual std::uintmax_t file_size(const std::filesystem::path& path) const = 0;
+    ~IRunner() override = default;
+
+    virtual ReturnCode Start(std::filesystem::path mainFile,
+                             unsigned char options,
+                             std::ostream& output,
+                             const std::vector<std::string>& programArgs) const = 0;
 };

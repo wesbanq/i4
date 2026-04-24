@@ -87,8 +87,8 @@ void Runner::resize_file(const std::filesystem::path& path, std::uintmax_t size)
     std::filesystem::resize_file(path, size);
 }
 
-RunnerOpenStream Runner::open(const std::filesystem::path& path, std::ios::openmode mode) const {
-    return RunnerOpenStream(new std::fstream(path, mode), deleteFstreamAsIostream);
+FileSystemOpenStream Runner::open(const std::filesystem::path& path, std::ios::openmode mode) const {
+    return FileSystemOpenStream(new std::fstream(path, mode), deleteFstreamAsIostream);
 }
 
 std::uintmax_t Runner::file_size(const std::filesystem::path& path) const {

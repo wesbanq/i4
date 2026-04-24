@@ -1,23 +1,23 @@
 #pragma once
 
 #include "StackWord.h"
-#include "IRunner.h"
+#include "IFileSystem.h"
 #include <string_view>
 
 class StackFile {
 private:
-    const IRunner& Fs;
+    const IFileSystem& Fs;
     std::filesystem::path Filename;
 
-    RunnerOpenStream GetFile() const;
-    static unsigned int SkipSeparator(RunnerOpenStream& file);
+    FileSystemOpenStream GetFile() const;
+    static unsigned int SkipSeparator(FileSystemOpenStream& file);
 public:
     static constexpr std::string_view CodeExtension = ".i4";
     static constexpr std::string_view StackExtension = ".i4s";
     static constexpr std::string_view DefExtension = ".i4d_";
     static constexpr std::string_view LabelExtension = ".i4l_";
 
-    StackFile(const IRunner& fs, std::filesystem::path filename);
+    StackFile(const IFileSystem& fs, std::filesystem::path filename);
 
     StackWord PopWord();
     std::pair<StackWord, unsigned int> PeekWord() const;
@@ -28,7 +28,7 @@ public:
     std::uintmax_t Size() const;
     std::filesystem::path GetPath() const;
 
-    static StackFile Find(const IRunner& fs, 
+    static StackFile Find(const IFileSystem& fs, 
                           const std::filesystem::path& base, 
                           const std::string_view name,
                           const std::string_view ext);

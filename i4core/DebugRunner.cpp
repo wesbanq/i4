@@ -1,7 +1,6 @@
 #include "DebugRunner.h"
 #include "Interpreter.h"
 #include "Option.h"
-#include "Runner.h"
 #include "StackFile.h"
 #include <filesystem>
 #include <fstream>
@@ -155,8 +154,8 @@ void DebugRunner::resize_file(const std::filesystem::path& path, std::uintmax_t 
         s.append(newSize - s.size(), '\0');
 }
 
-RunnerOpenStream DebugRunner::open(const std::filesystem::path& path, std::ios::openmode mode) const {
-    return RunnerOpenStream(new DebugStream(files, path, mode), deleteDebugStream);
+FileSystemOpenStream DebugRunner::open(const std::filesystem::path& path, std::ios::openmode mode) const {
+    return FileSystemOpenStream(new DebugStream(files, path, mode), deleteDebugStream);
 }
 
 std::uintmax_t DebugRunner::file_size(const std::filesystem::path& path) const {
@@ -212,7 +211,7 @@ ReturnCode DebugRunner::Start(std::filesystem::path mainFile,
     if (Interpreter::HasOption(options, Option::BOX)) {
         const std::filesystem::path parent = runPath.parent_path();
         const std::filesystem::path boxDir =
-            parent / (runPath.stem().string() + std::string(Runner::BoxDirectorySuffix));
+            parent / (runPath.stem().string() + std::string(BoxDirectorySuffix));
         removeVirtualFilesUnder(files, boxDir);
         const std::filesystem::path boxedMain = boxDir / runPath.filename();
         const std::filesystem::path fromKey = normalizePath(runPath);
