@@ -42,7 +42,7 @@ void Runner::enforceSafeCodeFileBudget(const std::filesystem::path& mainFile) co
     }
 }
 
-std::string Runner::Start(std::filesystem::path mainFile, 
+ReturnCode Runner::Start(std::filesystem::path mainFile, 
                           unsigned char options, 
                           std::ostream& output,
                           const std::vector<std::string>& programArgs) const {
@@ -61,7 +61,7 @@ std::string Runner::Start(std::filesystem::path mainFile,
 
     Interpreter interpreter(*this, std::move(runPath), output, options);
     if ((options & static_cast<unsigned char>(Option::DONTRUN)) > 0) {
-        interpreter.PushProgramArgs(programArgs);
+        interpreter.PushArgs(programArgs);
         while (!interpreter.Finished()) {
             if (Interpreter::HasOption(options, Option::LIMIT))
                 enforceSafeCodeFileBudget(runPath);
@@ -74,7 +74,7 @@ std::string Runner::Start(std::filesystem::path mainFile,
 
             interpreter.Step();
         }
-        return interpreter.PopFinalResult();
+        return interpreter.PopResult();
     }
     return interpreter.Run(programArgs);
 }

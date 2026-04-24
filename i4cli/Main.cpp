@@ -74,7 +74,7 @@ static bool MapFlag(std::string_view arg, unsigned char& outBits) {
 }
 
 static std::tuple<std::vector<std::string>, unsigned char, std::vector<std::string>> FormatArgs(
-	int argc, char* argv[], const IRunner& fs) {
+	int argc, char* argv[]) {
 	auto filenames = std::vector<std::string>();
 	unsigned char options = 0;
 	auto programArgs = std::vector<std::string>();
@@ -107,7 +107,7 @@ static std::tuple<std::vector<std::string>, unsigned char, std::vector<std::stri
 			}
 			options |= bits;
 		} else {
-			if (fs.exists(a)) {
+			if (std::filesystem::exists(a)) {
 				filenames.push_back(a);
 			} else {
 				std::cerr << "Could not locate file: \"" << a << "\".\n";
@@ -119,15 +119,14 @@ static std::tuple<std::vector<std::string>, unsigned char, std::vector<std::stri
 }
 
 int main(int argc, char* argv[]) {
-	Runner runner;
-	auto [filenames, options, programArgs] = FormatArgs(argc, argv, runner);
+	auto [filenames, options, programArgs] = FormatArgs(argc, argv);
 
 	if (filenames.empty()) {
 		std::cerr << "No files provided.\n";
 		return 1;
 	}
 
-	std::string result;
+	ReturnCode result;
 	try {
 		if (Interpreter::HasOption(options, Option::MEMORY)) {
 			DebugRunner debugRunner = DebugRunner::fromFilesystemAround(filenames[0]);
@@ -139,13 +138,14 @@ int main(int argc, char* argv[]) {
 				mainPath = std::filesystem::path(filenames[0]);
 			result = debugRunner.Start(mainPath, options, std::cout, programArgs);
 		} else {
+			Runner runner;
 			result = runner.Start(filenames[0], options, std::cout, programArgs);
 		}
-		std::cout << "\nProgram finished with code: " << result << std::endl;
+		std::cout << "\nProgram finished with code: " << result.first << std::endl;
 	} catch (std::exception& e) {
 		std::cerr << "Error: " << e.what() << std::endl;
 		return 2;
 	}
 	
-	return result == "OK" ? 0 : 1;
+	return result.second;
 }

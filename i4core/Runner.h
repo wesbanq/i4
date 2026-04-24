@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ReturnCode.h"
 #include "IRunner.h"
 #include <filesystem>
 #include <string_view>
@@ -17,7 +18,7 @@ public:
     RunnerOpenStream open(const std::filesystem::path& path, std::ios::openmode mode) const override;
     std::uintmax_t file_size(const std::filesystem::path& path) const override;
 
-    std::string Start(std::filesystem::path mainFile, 
+    ReturnCode Start(std::filesystem::path mainFile, 
                       unsigned char options, 
                       std::ostream& output,
                       const std::vector<std::string>& programArgs) const;

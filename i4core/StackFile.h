@@ -20,8 +20,9 @@ public:
     StackFile(const IRunner& fs, std::filesystem::path filename);
 
     StackWord PopWord();
-    void PushWord(const StackWord& word);
     std::pair<StackWord, unsigned int> PeekWord() const;
+    void PushWord(const StackWord& word);
+    void PushEmpty();
 
     void Halt();
     std::uintmax_t Size() const;

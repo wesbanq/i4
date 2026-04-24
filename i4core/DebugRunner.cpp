@@ -203,10 +203,11 @@ void DebugRunner::enforceSafeCodeFileBudget(const std::filesystem::path& mainFil
     }
 }
 
-std::string DebugRunner::Start(std::filesystem::path mainFile,
+ReturnCode DebugRunner::Start(std::filesystem::path mainFile,
                                unsigned char options,
                                std::ostream& output,
                                const std::vector<std::string>& programArgs) const {
+    ReturnCode result;
     std::filesystem::path runPath = std::move(mainFile);
     if (Interpreter::HasOption(options, Option::BOX)) {
         const std::filesystem::path parent = runPath.parent_path();
@@ -224,7 +225,7 @@ std::string DebugRunner::Start(std::filesystem::path mainFile,
 
     Interpreter interpreter(*this, std::move(runPath), output, options);
     if ((options & static_cast<unsigned char>(Option::DONTRUN)) > 0) {
-        interpreter.PushProgramArgs(programArgs);
+        interpreter.PushArgs(programArgs);
         while (!interpreter.Finished()) {
             if (Interpreter::HasOption(options, Option::LIMIT))
                 enforceSafeCodeFileBudget(runPath);
@@ -237,7 +238,8 @@ std::string DebugRunner::Start(std::filesystem::path mainFile,
 
             interpreter.Step();
         }
-        return interpreter.PopFinalResult();
+        return interpreter.PopResult();
     }
-    return interpreter.Run(programArgs);
+    result = interpreter.Run(programArgs);
+    return result;
 }

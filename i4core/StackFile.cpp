@@ -130,6 +130,10 @@ void StackFile::PushWord(const StackWord& word) {
     *file << word.Format();
 }
 
+void StackFile::PushEmpty() {
+    PushWord({ "", true });
+}
+
 void StackFile::Halt() {
     Fs.resize_file(Filename, 0);
 }

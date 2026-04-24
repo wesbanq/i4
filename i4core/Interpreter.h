@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ReturnCode.h"
 #include "StackFile.h"
 #include "IRunner.h"
 #include "Option.h"
@@ -20,9 +21,9 @@ public:
 	Interpreter(const IRunner& fs, std::filesystem::path mainFile, std::ostream& outputStream,
 	            unsigned char options);
 
-	std::string Run(std::vector<std::string> args);
-	void PushProgramArgs(const std::vector<std::string>& args);
-	std::string PopFinalResult();
+	ReturnCode Run(std::vector<std::string> args);
+	void PushArgs(const std::vector<std::string>& args);
+	ReturnCode PopResult();
 	void Step();
 	bool Finished() const;
 

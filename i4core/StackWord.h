@@ -9,6 +9,7 @@ namespace Words {
     inline static constexpr std::string_view Out            = ".";
     inline static constexpr std::string_view In             = "?";
     inline static constexpr std::string_view Open           = "nepo";
+    inline static constexpr std::string_view Write          = "etirw";
     inline static constexpr std::string_view Dupe           = "~~";
     inline static constexpr std::string_view Pop            = "p";
     inline static constexpr std::string_view Inject         = "<<";

@@ -65,25 +65,26 @@ Interpreter::Interpreter(const IRunner& fs,
 		}
 	}
 
-void Interpreter::PushProgramArgs(const std::vector<std::string>& args) {
+void Interpreter::PushArgs(const std::vector<std::string>& args) {
 	for (const auto& arg : args)
 		DataFile << arg;
 }
 
-std::string Interpreter::PopFinalResult() {
-	auto lastWord = DataFile.PopWord().Escape();
+ReturnCode Interpreter::PopResult() {
+	const auto lastWord = DataFile.PopWord().Escape();
+	const auto lastNum = ParsedNum(lastWord);
 	
-	if (lastWord == "")
-		lastWord = "OK";
-	
-	return lastWord;
+	if (lastNum.kind == NumKind::NaN)
+		return { lastWord, lastWord.empty() || lastWord == "OK" ? 0u : 1u };
+	else
+		return { lastWord, static_cast<unsigned char>(lastNum.i) };
 }
 
-std::string Interpreter::Run(std::vector<std::string> args) {
-	PushProgramArgs(args);
+ReturnCode Interpreter::Run(std::vector<std::string> args) {
+	PushArgs(args);
 	while (!Finished())
 		Step();
-	return PopFinalResult();
+	return PopResult();
 }
 
 void Interpreter::Step() {
@@ -91,9 +92,6 @@ void Interpreter::Step() {
 
 	if (HasOption(Option::VERBOSE))
 		std::cout << word.Format() << '\n';
-
-	// if (word.Word.empty())
-	// 	return;
 	
 	if (word.Literal) {
 		DataFile << word;
@@ -103,27 +101,29 @@ void Interpreter::Step() {
 	if (word.Word == Words::Def) {
 		auto name = DataFile.PopWord();
 		auto meaning = DataFile.PopWord();
-		// if (name.Word.empty())
-		// 	return;
+		
+		if (name.Word.empty())
+			throw std::runtime_error("Definition name is empty");
 		
 		auto defFile = StackFile::Find(Fs, CodeFilePath, name.Word, StackFile::DefExtension);
 		meaning.Word = meaning.Escape();
 		meaning.Literal = false;
+		
 		defFile << meaning;
-
 		return;
 	}
 	if (word.Word == Words::Label) {
 		auto name = DataFile.PopWord();
 		auto labelFile = StackFile::Find(Fs, CodeFilePath, name.Word, StackFile::LabelExtension);
-		labelFile << CodeFile;
 
+		labelFile << CodeFile;
 		return;
 	}
 	if (word.Word == Words::Jump) {
 		auto name = DataFile.PopWord();
-		// if (name.Word.empty())
-		// 	return;
+		if (name.Word.empty())
+			throw std::runtime_error("Jump target is empty");
+
 		CodeFile << StackFile::Find(Fs, CodeFilePath, name.Word, StackFile::LabelExtension);
 		return;
 	}
@@ -142,6 +142,7 @@ void Interpreter::Step() {
 	if (word.Word == Words::Swap) {
 		auto codeTop = CodeFile.PopWord();
 		auto dataTop = DataFile.PopWord();
+
 		CodeFile << dataTop;
 		DataFile << codeTop;
 		return;
@@ -155,27 +156,23 @@ void Interpreter::Step() {
 		std::cout << "? ";
 		std::string line;
 		std::cin >> line;
+
 		DataFile << StackWord(std::move(line), true);
 		return;
 	}
 	
 	if (word.Word == Words::Dupe) {
 		auto top = DataFile.PopWord();
-		// if (top.Word.empty())
-		// 	return;
 		DataFile << top;
 		DataFile << top;
 		return;
 	}
 	if (word.Word == Words::Pop) {
-		auto top = DataFile.PopWord();
-		(void)top;
+		DataFile.PopWord();
 		return;
 	}
 	if (word.Word == Words::Reverse) {
 		auto top = DataFile.PopWord();
-		// if (top.Word.empty())
-		// 	return;
 		DataFile << top;
 		return;
 	}
@@ -428,15 +425,33 @@ void Interpreter::Step() {
 		if (word.Word == Words::Open) {
 			auto pathWord = DataFile.PopWord();
 			std::filesystem::path path(pathWord.Escape());
-			if (path.is_relative())
-				path = WorkDir / path;
-			if (!Fs.exists(path))
+			if (path.is_relative()) path = WorkDir / path;
+
+			if (!Fs.exists(path)) {
+				DataFile.PushEmpty();
 				return;
+			}
+
 			auto in = Fs.open(path, std::ios::in | std::ios::binary);
 			if (!in || !in->good())
-				return;
+				throw std::runtime_error("Failed to open file for reading: " + path.string());
+			
 			std::string content((std::istreambuf_iterator<char>(*in)), std::istreambuf_iterator<char>());
 			DataFile << StackWord(std::move(content), true);
+			return;
+		}
+		if (word.Word == Words::Write) {
+			auto pathWord = DataFile.PopWord();
+			auto contentWord = DataFile.PopWord();
+			
+			std::filesystem::path path(pathWord.Escape());
+			if (path.is_relative()) path = WorkDir / path;
+			
+			auto out = Fs.open(path, std::ios::out | std::ios::binary | std::ios::trunc);
+			if (!out || !out->good())
+				throw std::runtime_error("Failed to open file for writing: " + path.string());
+			
+			*out << contentWord.Escape();
 			return;
 		}
 	}
@@ -445,11 +460,11 @@ void Interpreter::Step() {
 		auto doHttp = [this](std::string_view method) {
 			auto payload = DataFile.PopWord();
 			auto address = DataFile.PopWord();
-			if (address.Word.empty())
-				return;
+			if (address.Word.empty()) return;
+
 			auto response = HttpRequest(method, address.Word, payload.Word);
-			if (!response.has_value())
-				return;
+			if (!response.has_value()) DataFile.PushEmpty();
+
 			DataFile << StackWord(std::move(*response), true);
 		};
 	
