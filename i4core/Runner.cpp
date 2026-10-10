@@ -62,7 +62,7 @@ ReturnCode Runner::Start(std::filesystem::path mainFile,
         runPath = std::move(boxedMain);
     }
 
-    Interpreter interpreter(*this, std::move(runPath), output, options);
+    Interpreter interpreter(*this, runPath, output, options);
     if ((options & static_cast<unsigned char>(Option::DONTRUN)) > 0) {
         interpreter.PushArgs(programArgs);
         while (!interpreter.Finished()) {

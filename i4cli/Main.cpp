@@ -22,16 +22,19 @@
 
 static void PrintHelp() {
 	std::cout <<
-		"Usage: i4 [options] [file ...] [-- [program-arg ...]]\n"
+		"Usage: i4 [options] <file> [-- <program args>]\n"
 		"\n"
 		"Options:\n"
-		"  -v, -verbose    Verbose output\n"
-		"  -s, -safe       Safe mode\n"
-		"  -b, -box        Box mode\n"
-		"  -F, -nofs       Disable filesystem features\n"
+		"  -b, -box        Run a copy of the program in a fresh <name>.i4box directory\n"
+		"  -m, -memory     Run in an in-memory filesystem; nothing is written to disk\n"
+		"  -S, -step       Wait for Enter before executing each instruction\n"
+		"  -F, -nofs       Disable open and write\n"
+		"  -s, -safe       -nofs, and abort if the .i4 files under the program's directory\n"
+		"                  grow past " << IRunner::SafeCodeFilesLimitMb << " MiB\n"
+		"  -v, -verbose    Print every token as it runs\n"
+		"  -d, -debug      -memory, -step and -safe combined\n"
 		"  -h, -help       Show this help\n"
-		"  -V, -version    Show version\n"
-		"  -d, -debug      Debug mode\n";
+		"  -V, -version    Show version\n";
 }
 
 static void PrintVersion() {

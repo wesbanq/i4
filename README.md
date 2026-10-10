@@ -131,7 +131,7 @@ i4 [options] <file> [-- <program args>]
 |`-memory`, `-m`|Run inside a virtual, in-memory filesystem: the files around the program are loaded, and nothing is written to disk|
 |`-step`, `-S`|Wait for Enter before executing each instruction|
 |`-nofs`, `-F`|Disable `open` and `write` (they become ordinary words)|
-|`-safe`, `-s`|`-nofs`, plus abort if the program's `.i4` files grow past 16 MiB|
+|`-safe`, `-s`|`-nofs`, plus abort if the `.i4` files under the program's directory grow past 16 MiB|
 |`-verbose`, `-v`|Print every token as it runs, in its internal reversed form|
 |`-debug`, `-d`|`-memory`, `-step` and `-safe` combined|
 |`-help`, `-h`|Print help message|
