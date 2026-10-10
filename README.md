@@ -72,8 +72,6 @@ the same as in the code stack's file.
 |`>>`							|Takes the string off the top of the code stack, and puts it on top of the data|
 |`<> <str>`						|Swaps the top of the code and data stacks|
 |`open <filename>`              |Pastes the entire content of <filename> into the data stack backwards. Puts empty string if file was not found, or an error happened|
-|`get <addr>`						|Does an HTTP GET request, puts response on the data stack|
-|`post/put/patch/delete/options <addr> <payload>`	|Does the corresponding HTTP request, puts the response on the data stack|
 |`=/~=/>/</>=/<= <lhs> <rhs>`				|Compares|
 |`&/\|/^ <lhs> <rhs>`					|Logic instructions. Every non-zero value or non-empty string is treated as true|
 |`~ <str>`					            |Logic not|
@@ -91,9 +89,7 @@ the same as in the code stack's file.
 |`-step`	|Await user input before executing each instruction from the code stack	  			|
 |`-limit`	|Abort if the sizes of all i4 files combined is over 10MB					|
 |`-no-fs`	|Disable all filesystem instructions		 						|
-|`-no-web`	|Disable all web instructions		 							|
-|`-no-ext`	|-no-web and -no-fs combined									|
-|`-safe`	|-no-ext and -limit combined	 								|
+|`-safe`	|-no-fs and -limit combined	 								|
 |`-verbose`	|Output names of all executed instructions to stdout		 				|
 |`-debug`	|-mem, -step and -safe combined		 							|
 |`-help`	|Print help message		 								|

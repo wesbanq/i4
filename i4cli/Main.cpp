@@ -27,8 +27,6 @@ static void PrintHelp() {
 		"  -s, -safe       Safe mode\n"
 		"  -b, -box        Box mode\n"
 		"  -F, -nofs       Disable filesystem features\n"
-		"  -W, -noweb      Disable web features\n"
-		"  -x, -no-ext     Same as -nofs and -noweb\n"
 		"  -h, -help       Show this help\n"
 		"  -V, -version    Show version\n"
 		"  -d, -debug      Debug mode\n";
@@ -39,7 +37,7 @@ static void PrintVersion() {
 }
 
 using FlagPair = std::pair<std::string_view, Option>;
-static constexpr std::array<FlagPair, 18> StringToArgs = {
+static constexpr std::array<FlagPair, 14> StringToArgs = {
 	FlagPair{ "-verbose", Option::VERBOSE },
 	FlagPair{ "-v", Option::VERBOSE },
 	FlagPair{ "-safe", Option::SAFE },
@@ -48,12 +46,8 @@ static constexpr std::array<FlagPair, 18> StringToArgs = {
 	FlagPair{ "-b", Option::BOX },
 	FlagPair{ "-debug", Option::DEBUG },
 	FlagPair{ "-d", Option::DEBUG },
-	FlagPair{ "-no-ext", Option::NOEXT },
-	FlagPair{ "-x", Option::NOEXT },
 	FlagPair{ "-nofs", Option::NOFS },
 	FlagPair{ "-F", Option::NOFS },
-	FlagPair{ "-noweb", Option::NOWEB },
-	FlagPair{ "-W", Option::NOWEB },
 	FlagPair{ "-step", Option::STEP },
 	FlagPair{ "-S", Option::STEP },
 	FlagPair{ "-memory", Option::MEMORY },

@@ -1,10 +1,8 @@
 #include "Interpreter.h"
-#include "HttpClient.h"
 #include "IFileSystem.h"
 #include <charconv>
 #include <iostream>
 #include <iterator>
-#include <optional>
 #include <vector>
 
 namespace {
@@ -452,40 +450,6 @@ void Interpreter::Step() {
 				throw std::runtime_error("Failed to open file for writing: " + path.string());
 			
 			*out << contentWord.Escape();
-			return;
-		}
-	}
-
-	if (!HasOption(Option::NOWEB)) {
-		auto doHttp = [this](std::string_view method) {
-			auto payload = DataFile.PopWord();
-			auto address = DataFile.PopWord();
-			if (address.Word.empty()) return;
-
-			auto response = HttpRequest(method, address.Word, payload.Word);
-			if (!response.has_value()) DataFile.PushEmpty();
-
-			DataFile << StackWord(std::move(*response), true);
-		};
-	
-		if (word.Word == Words::Get) {
-			doHttp("GET");
-			return;
-		}
-		if (word.Word == Words::Post) {
-			doHttp("POST");
-			return;
-		}
-		if (word.Word == Words::Put) {
-			doHttp("PUT");
-			return;
-		}
-		if (word.Word == Words::Delete) {
-			doHttp("DELETE");
-			return;
-		}
-		if (word.Word == Words::Options) {
-			doHttp("OPTIONS");
 			return;
 		}
 	}

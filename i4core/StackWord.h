@@ -21,11 +21,6 @@ namespace Words {
     inline static constexpr std::string_view Slice          = "]:[";
     inline static constexpr std::string_view Split          = "lps";
     inline static constexpr std::string_view Halt           = "tlah";
-    inline static constexpr std::string_view Get            = "teg";
-    inline static constexpr std::string_view Post           = "tsop";
-    inline static constexpr std::string_view Put            = "tup";
-    inline static constexpr std::string_view Delete         = "eteled";
-    inline static constexpr std::string_view Options        = "snoitpo";
     inline static constexpr std::string_view Add            = "+";
     inline static constexpr std::string_view Sub            = "-";
     inline static constexpr std::string_view Mul            = "*";
