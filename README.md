@@ -141,7 +141,7 @@ i4 [options] <file> [-- <program args>]
 
 ## Building
 
-You need [Ninja](https://ninja-build.org), `clang++`, `llvm-ar` and a POSIX `sh` (Git Bash works on Windows). Git is optional, for the version string.
+You need [Ninja](https://ninja-build.org), `clang++`, a POSIX `sh` (Git Bash works on Windows), and `llvm-ar` or the system's `ar`. On macOS, the Xcode command line tools provide `clang++` and `ar`, and Ninja is on Homebrew. Git is optional, for the version string.
 
 ```sh
 ninja                   # builds build/i4 (build/i4.exe on Windows)

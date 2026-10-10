@@ -1,14 +1,14 @@
 # i4 — Ninja + Clang. Run from the repository root.
 #
 # First-time build: run `ninja` — generates build/I4Version.h, then compiles (Main.o waits on that header).
-# Prerequisites: clang++, llvm-ar, POSIX sh (e.g. Git Bash on Windows). Git optional.
+# Prerequisites: clang++, llvm-ar (or the system ar, e.g. on macOS), POSIX sh (e.g. Git Bash on Windows). Git optional.
 #
 #   ninja
 #   ninja -t compdb cxx > compile_commands.json   # rule name: cxx; refresh after new .cpp
 #
 # builddir is set below (change `builddir = ...` to use another output directory).
 #
-# Requires: clang++, llvm-ar (LLVM bin on PATH). Git in PATH for version strings (optional).
+# Requires: clang++, llvm-ar or ar (scripts/archive.sh falls back to ar). Git in PATH for version strings (optional).
 # Keep compile_flags.txt and compile_commands.json in sync with cflags / cxx rules (clangd).
 #
 # Version: i4cli/I4Version.h.in + scripts/gen_version.sh (git describe, else unknown) -> $builddir/I4Version.h
@@ -32,7 +32,7 @@ rule cxx
   description = CXX $in
 
 rule ar
-  command = $ar rcs $out $in
+  command = sh scripts/archive.sh $ar $out $in
   description = AR $out
 
 rule link
@@ -49,7 +49,7 @@ build $builddir/i4core/StackFile.o: cxx i4core/StackFile.cpp
 build $builddir/i4core/StackWord.o: cxx i4core/StackWord.cpp
 build $builddir/i4cli/Main.o: cxx i4cli/Main.cpp | $builddir/I4Version.h
 
-build $builddir/i4core/libi4core.a: ar $builddir/i4core/Interpreter.o $builddir/i4core/IRunner.o $builddir/i4core/Runner.o $builddir/i4core/DebugRunner.o $builddir/i4core/StackFile.o $builddir/i4core/StackWord.o
+build $builddir/i4core/libi4core.a: ar $builddir/i4core/Interpreter.o $builddir/i4core/IRunner.o $builddir/i4core/Runner.o $builddir/i4core/DebugRunner.o $builddir/i4core/StackFile.o $builddir/i4core/StackWord.o | scripts/archive.sh
 
 build $builddir/i4.stamp: link $builddir/i4cli/Main.o $builddir/i4core/libi4core.a | scripts/link.sh
   bin = $builddir/i4

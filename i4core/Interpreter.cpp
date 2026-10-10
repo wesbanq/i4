@@ -1,9 +1,12 @@
 #include "Interpreter.h"
 #include "IFileSystem.h"
 #include <algorithm>
+#include <cctype>
+#include <cerrno>
 #include <charconv>
 #include <cmath>
 #include <cstdint>
+#include <cstdlib>
 #include <iostream>
 #include <iterator>
 #include <limits>
@@ -27,6 +30,27 @@ std::int64_t ClampToInt(long double d) {
 	return static_cast<std::int64_t>(d);
 }
 
+/// Parses all of s as a long double, accepting exactly what std::from_chars would (no leading
+/// whitespace, '+' or hex). libc++ (macOS) has no from_chars for long double, so this uses
+/// strtold, which reads '.' as the decimal point since i4 never changes the C locale.
+bool ParseLongDouble(const std::string& s, long double& out) {
+	if (s.empty() || std::isspace(static_cast<unsigned char>(s[0])) || s[0] == '+'
+		|| s.find_first_of("xX") != std::string::npos)
+		return false;
+
+	errno = 0;
+	char* end = nullptr;
+	const long double value = std::strtold(s.c_str(), &end);
+	if (end != s.c_str() + s.size())
+		return false;
+	// Too large, or too small to be anything but zero; tiny subnormal values are fine.
+	if (errno == ERANGE && (value == 0 || value == HUGE_VALL || value == -HUGE_VALL))
+		return false;
+
+	out = value;
+	return true;
+}
+
 struct ParsedNum {
 	NumKind kind;
 	std::int64_t i;
@@ -47,8 +71,7 @@ struct ParsedNum {
 			d = static_cast<long double>(i);
 		} else {
 			kind = NumKind::Float;
-			auto [ptr, ec] = std::from_chars(first, last, d);
-			if (ec != std::errc() || ptr != last) {
+			if (!ParseLongDouble(s, d)) {
 				kind = NumKind::NaN;
 				return;
 			}
