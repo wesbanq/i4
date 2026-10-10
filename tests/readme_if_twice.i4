@@ -1,0 +1,2 @@
+. - 5 1 . "|" if "= 0" ". \"\zero\"\" ". \"\nonzero\"\" 3 . "|" if "= 0" ". \"\zero\"\" ". \"\nonzero\"\" 0
+def >< if "<< + \"\fi\"\ cond def >< \"\0if\"\ def >< \"\1if\"\ def >< \"\cond\"\"

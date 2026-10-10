@@ -4,6 +4,7 @@
 #include "StackFile.h"
 #include "IFileSystem.h"
 #include "Option.h"
+#include <filesystem>
 #include <iostream>
 #include <string>
 #include <vector>

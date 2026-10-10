@@ -11,6 +11,7 @@
 #include <string_view>
 #include <vector>
 #include <array>
+#include <utility>
 
 #if __has_include("I4Version.h")
 #include "I4Version.h"
@@ -20,18 +21,19 @@
 
 static void PrintHelp() {
 	std::cout <<
-		"Usage: i4 [options] [file ...] [-- [program-arg ...]]\n"
+		"Usage: i4 [options] <file> [-- <program args>]\n"
 		"\n"
 		"Options:\n"
-		"  -v, -verbose    Verbose output\n"
-		"  -s, -safe       Safe mode\n"
-		"  -b, -box        Box mode\n"
-		"  -F, -nofs       Disable filesystem features\n"
-		"  -W, -noweb      Disable web features\n"
-		"  -x, -no-ext     Same as -nofs and -noweb\n"
+		"  -b, -box        Run a copy of the program in a fresh <name>.i4box directory\n"
+		"  -m, -memory     Run in an in-memory filesystem; nothing is written to disk\n"
+		"  -S, -step       Wait for Enter before executing each instruction\n"
+		"  -F, -nofs       Disable open and write\n"
+		"  -s, -safe       -nofs, and abort if the .i4 files under the program's directory\n"
+		"                  grow past " << IRunner::SafeCodeFilesLimitMb << " MiB\n"
+		"  -v, -verbose    Print every token as it runs\n"
+		"  -d, -debug      -memory, -step and -safe combined\n"
 		"  -h, -help       Show this help\n"
-		"  -V, -version    Show version\n"
-		"  -d, -debug      Debug mode\n";
+		"  -V, -version    Show version\n";
 }
 
 static void PrintVersion() {
@@ -39,7 +41,7 @@ static void PrintVersion() {
 }
 
 using FlagPair = std::pair<std::string_view, Option>;
-static constexpr std::array<FlagPair, 18> StringToArgs = {
+static constexpr std::array<FlagPair, 14> StringToArgs = {
 	FlagPair{ "-verbose", Option::VERBOSE },
 	FlagPair{ "-v", Option::VERBOSE },
 	FlagPair{ "-safe", Option::SAFE },
@@ -48,12 +50,8 @@ static constexpr std::array<FlagPair, 18> StringToArgs = {
 	FlagPair{ "-b", Option::BOX },
 	FlagPair{ "-debug", Option::DEBUG },
 	FlagPair{ "-d", Option::DEBUG },
-	FlagPair{ "-no-ext", Option::NOEXT },
-	FlagPair{ "-x", Option::NOEXT },
 	FlagPair{ "-nofs", Option::NOFS },
 	FlagPair{ "-F", Option::NOFS },
-	FlagPair{ "-noweb", Option::NOWEB },
-	FlagPair{ "-W", Option::NOWEB },
 	FlagPair{ "-step", Option::STEP },
 	FlagPair{ "-S", Option::STEP },
 	FlagPair{ "-memory", Option::MEMORY },
@@ -129,14 +127,9 @@ int main(int argc, char* argv[]) {
 	ReturnCode result;
 	try {
 		if (Interpreter::HasOption(options, Option::MEMORY)) {
-			DebugRunner debugRunner = DebugRunner::fromFilesystemAround(filenames[0]);
-			std::error_code ec;
-			const std::filesystem::path cwd = std::filesystem::current_path();
-			const std::filesystem::path mainAbs = std::filesystem::weakly_canonical(filenames[0]);
-			std::filesystem::path mainPath = std::filesystem::relative(mainAbs, cwd, ec);
-			if (ec)
-				mainPath = std::filesystem::path(filenames[0]);
-			result = debugRunner.Start(mainPath, options, std::cout, programArgs);
+			DebugRunner debugRunner;
+			debugRunner.Preload(std::filesystem::current_path());
+			result = debugRunner.Start(filenames[0], options, std::cout, programArgs);
 		} else {
 			Runner runner;
 			result = runner.Start(filenames[0], options, std::cout, programArgs);

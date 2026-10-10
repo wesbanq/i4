@@ -1,11 +1,7 @@
 #include "Runner.h"
-#include "Interpreter.h"
-#include "Option.h"
-#include "StackFile.h"
 #include <fstream>
 #include <filesystem>
-#include <stdexcept>
-#include <string>
+#include <iostream>
 
 namespace {
 
@@ -14,70 +10,6 @@ void deleteFstreamAsIostream(std::iostream* p) {
 }
 
 } // namespace
-
-void Runner::enforceSafeCodeFileBudget(const std::filesystem::path& mainFile) const {
-    std::filesystem::path dir = mainFile.parent_path();
-    if (dir.empty())
-        dir = std::filesystem::current_path();
-
-    const std::uintmax_t limitBytes =
-        static_cast<std::uintmax_t>(SafeCodeFilesLimitMb) * 1024 * 1024;
-    std::uintmax_t total = 0;
-
-    std::filesystem::recursive_directory_iterator it(
-        dir, std::filesystem::directory_options::skip_permission_denied);
-    for (const std::filesystem::directory_entry& entry : it) {
-        if (!entry.is_regular_file())
-            continue;
-        const std::filesystem::path& p = entry.path();
-        const std::string ext = p.extension().string();
-        if (ext.find(StackFile::CodeExtension) == std::string::npos)
-            continue;
-        total += file_size(p);
-        if (total > limitBytes) {
-            throw std::runtime_error(
-                "SAFE: total size of files with \"" + std::string(StackFile::CodeExtension) +
-                "\" in the extension exceeds " + std::to_string(SafeCodeFilesLimitMb) + " MiB");
-        }
-    }
-}
-
-ReturnCode Runner::Start(std::filesystem::path mainFile, 
-                          unsigned char options, 
-                          std::ostream& output,
-                          const std::vector<std::string>& programArgs) const {
-    std::filesystem::path runPath = std::move(mainFile);
-    if (Interpreter::HasOption(options, Option::BOX)) {
-        const std::filesystem::path parent = runPath.parent_path();
-        const std::filesystem::path boxDir =
-            parent / (runPath.stem().string() + std::string(BoxDirectorySuffix));
-        if (std::filesystem::exists(boxDir))
-            std::filesystem::remove_all(boxDir);
-        std::filesystem::create_directories(boxDir);
-        const std::filesystem::path boxedMain = boxDir / runPath.filename();
-        std::filesystem::copy_file(runPath, boxedMain, std::filesystem::copy_options::overwrite_existing);
-        runPath = std::move(boxedMain);
-    }
-
-    Interpreter interpreter(*this, std::move(runPath), output, options);
-    if ((options & static_cast<unsigned char>(Option::DONTRUN)) > 0) {
-        interpreter.PushArgs(programArgs);
-        while (!interpreter.Finished()) {
-            if (Interpreter::HasOption(options, Option::LIMIT))
-                enforceSafeCodeFileBudget(runPath);
-
-            if (Interpreter::HasOption(options, Option::STEP)) {
-                std::string line;
-                std::printf("*");
-                std::getline(std::cin, line);
-            }
-
-            interpreter.Step();
-        }
-        return interpreter.PopResult();
-    }
-    return interpreter.Run(programArgs);
-}
 
 bool Runner::exists(const std::filesystem::path& path) const {
     return std::filesystem::exists(path);
@@ -93,4 +25,20 @@ FileSystemOpenStream Runner::open(const std::filesystem::path& path, std::ios::o
 
 std::uintmax_t Runner::file_size(const std::filesystem::path& path) const {
     return std::filesystem::file_size(path);
+}
+
+void Runner::create_directories(const std::filesystem::path& path) const {
+    std::filesystem::create_directories(path);
+}
+
+void Runner::remove_all(const std::filesystem::path& path) const {
+    std::filesystem::remove_all(path);
+}
+
+std::vector<std::filesystem::path> Runner::files_under(const std::filesystem::path& dir) const {
+    std::vector<std::filesystem::path> files;
+    for (const auto& entry : std::filesystem::recursive_directory_iterator(dir, std::filesystem::directory_options::skip_permission_denied))
+        if (entry.is_regular_file())
+            files.push_back(entry.path());
+    return files;
 }

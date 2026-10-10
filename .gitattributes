@@ -1,0 +1,2 @@
+# Build scripts run under sh; CRLF line endings (Git for Windows' default checkout) would break them.
+*.sh text eol=lf

@@ -1,0 +1,2 @@
+if "~= 0" "^: l . 1 : l" ". 0" ?
+def >< if "<< + \"\fi\"\ cond def >< \"\0if\"\ def >< \"\1if\"\ def >< \"\cond\"\"
