@@ -18,9 +18,37 @@ Both stacks share the same mechanic — pushing is appending to the file, and po
 
 Programs are written *backwards*. The interpreter reads tokens from the end of the code file, executing each one and truncating it away. When a user-defined word is encountered, its definition is appended to the code file — becoming the next thing to execute. This means function calls are literally just text being written to a file you can inspect at any moment.
 
-String literals are wrapped in quotes and pushed to the data stack as-is. Anything unrecognised is also pushed as a string, making unknown tokens data rather than errors.  
+Tokens are separated by whitespace. String literals are wrapped in quotes and pushed to the data stack. Anything unrecognised is also pushed as a string, making unknown tokens data rather than errors.
 
+For a program `prog.i4`, the data stack lives in `prog.i4s`, each definition in `prog.i4d_<name>` and each label in `prog.i4l_<name>`, all next to the program. Running a program consumes it: the code file is eaten as it runs, and the data stack, definitions and labels stay on disk afterwards, where the next run will find them. Use `-box` to run a copy instead, or `-memory` to keep everything in memory.
 
+### Everything reads backwards
+
+Because the stacks are read from the end, text gets reversed whenever it makes a trip through the data stack:
+
+- Text you write in the code comes out as written: `. "Hello"` prints `Hello`.
+- Text an instruction puts back on the data stack comes out reversed: copies (`~~`), joined strings (`+`), slices (`[:]`), split parts (`spl`), input (`?`), program arguments and file contents (`open`). Two trips cancel out, which is also how `><` reverses: it's a trip that does nothing else.
+- Numbers from arithmetic, comparisons, logic and `#`, and the single characters from `@`, always read normally.
+- `<<` and `def` turn whatever text they're given into code, so give them text that reads normally.
+
+Words are matched backwards too: `def` defines the word whose name is its argument reversed. So to define `foo`, write `def >< foo ...` (`><` reverses the name back); palindromes like `e` work either way. To redefine a word, quote its name (`def >< "foo" ...`), otherwise the old definition runs instead of being named.
+
+### Escapes
+
+Escapes are written `\X\`, so they read the same in both directions:
+
+|Escape|Meaning|
+|---|---|
+|`\n\`|Newline|
+|`\t\`|Tab|
+|`\r\`|Carriage return|
+|`\0\`|Null character|
+|`\\\`|Backslash|
+|`\"\`|Quote|
+
+Any other `\X\` is kept as is, and a lone `\` is just a backslash. A quote with nothing to close it is an ordinary character. Escapes work outside quotes too (`foo\n\bar`), and text from input, program arguments and files can safely contain quotes and backslashes.
+
+Escapes stay as they are on the stack and are only decoded when the text is used: printed (`.`), defined (`def`), run (`<<`), used as a file name or written to a file (`open`, `write`), or returned as the program's result. So `#`, `@` and `[:]` see the raw characters: `# "a\n\b"` is `5`.
 
 ---
 
@@ -35,65 +63,90 @@ String literals are wrapped in quotes and pushed to the data stack as-is. Anythi
 **An if statement definition**
 
 ```python
-def >< if "udef \"\cond\"\ udef true udef false << != 0 cond def >< cond asstr def true asstr def false asstr" 
-def >< udef "def ~~ asstr" def >< asstr "<< [:] ee" def ee "e e" def e "\"\\"\"
-def >< true "1" def >< false "0"
+def >< if "<< + \"\fi\"\ cond def >< \"\0if\"\ def >< \"\1if\"\ def >< \"\cond\"\"
 ```
+
+`if <cond> <then> <else>` takes three pieces of code. Reading the definition from the right, it saves `<cond>` as the word `cond`, `<then>` as `1if` and `<else>` as `0if`. Then it runs `cond`, joins the result onto `"fi"` with `+` (which reverses, giving `1if` or `0if`), and runs that word with `<<`.
 
 **Truth machine**
 
 ```python
-if "~= false" "loop \"\. true\"\" ". false" ? def >< loop "^: l inner : l def \"\inner\"\ asstr"
+if "~= 0" "^: l . 1 : l" ". 0" ?
 ```
+
+Reads a number: `0` prints `0` and stops, anything else prints `1` forever. `: l` saves the rest of the code as the label `l`, and `^: l` jumps back to it. Put the `if` definition below this line: the file runs from the end, so definitions have to come after the code that uses them.
 
 ---
 
 ## Primitive Instructions
 
-For most instructions that operate on the stack, if the stack is empty they will also return an empty string.  
-When an instruction expects a value on the stack, it will be written as `OP <arg0> <arg1> ...`. The order of arguments is
-the same as in the code stack's file.  
+When an instruction takes values from the data stack, it's written as `OP <arg0> <arg1> ...`. The order of arguments is the same as in the code stack's file: `- 5 3` is `2`.
+
+Popping an empty stack gives an empty string, and an instruction that can't produce a result (a division by zero, a non-number where a number is needed, ...) pushes an empty string.
 
 |Instruction|Explanation|
 |---|---|
-|`def <name> <meaning>`					|When encountering a non-literal string <name>, put <meaning> on the code stack|
-|`: <name>`						|Create a new|
-|`^: <name>`						|Replace the contents of the code stack, with the code in the label|
-|`. <str>`						|Pop <str> and print|
-|`?`							|Put user input on top of the data|
-|`~~ <s>`						|Duplicates \<s> and puts it on top of the data|
-|`# <str>`						|Put the length of <str> on top of the data|
-|`@ <idx>`						|Put the character at <idx> of the string on top of the data stack. <id> wraps around the string if the index is out of bounds. Puts an empty string if stack is empty.|
-|`>< <std>`						|Pops <str> and puts reversed on the data|
-|`spl <sep> <str>`					|Split the <str> by <sep>, if <sep> is empty - split by character|
-|`p <s>`						|Pops \<s> off the data|
-|`[:] <start> <end> <str>`				|Puts a copy of <str> on top of the data stack, starting at <start> and ending at <end>. Has the same index wrapping behavior as `@`. If <start> or <end> is NaN, put a copy of the string as a literal on the stack|
-|`<< <str>`						|Puts <str> on top of the code|
-|`>>`							|Takes the string off the top of the code stack, and puts it on top of the data|
-|`<> <str>`						|Swaps the top of the code and data stacks|
-|`open <filename>`              |Pastes the entire content of <filename> into the data stack backwards. Puts empty string if file was not found, or an error happened|
-|`=/~=/>/</>=/<= <lhs> <rhs>`				|Compares|
-|`&/\|/^ <lhs> <rhs>`					|Logic instructions. Every non-zero value or non-empty string is treated as true|
-|`~ <str>`					            |Logic not|
-|`+/-/*///%/** <lhs> <rhs>`				|Take a guess|
-|`halt`						|Halt (delete the whole code)|
+|`def <name> <meaning>`|Define the word `<name>` (reversed, see above) as the code `<meaning>`, replacing any earlier definition. When the word is reached, its code is put on the code stack|
+|`: <name>`|Save the rest of the code stack as the label `<name>`, replacing any earlier label with that name|
+|`^: <name>`|Replace the code stack with the code saved in the label `<name>`. Does nothing if there's no such label|
+|`. <str>`|Pop `<str>` and print it (no newline)|
+|`?`|Print `? `, read a line of input and push it|
+|`~~ <str>`|Duplicate `<str>`|
+|`p <str>`|Pop `<str>`|
+|`# <str>`|Push the length of `<str>`|
+|`@ <idx> <str>`|Push the character at `<idx>`. The index wraps around in both directions, so `-1` is the last character|
+|`>< <str>`|Reverse `<str>`|
+|`spl <sep> <str>`|Split `<str>` by `<sep>`, leaving the first part on top. An empty `<sep>` splits into characters|
+|`[:] <start> <end> <str>`|Push the part of `<str>` from `<start>` up to `<end>`. Indices wrap like `@`, except that an `<end>` equal to the length means the end of the string, and a `<start>` past `<end>` wraps around the end. A non-number `<start>` or `<end>` means the start or end of the string|
+|`<< <code>`|Put `<code>` on top of the code stack, so it runs next|
+|`>>`|Move the next token from the code stack to the data stack|
+|`<> <str>`|Swap the top of the code stack with `<str>`|
+|`open <path>`|Push the contents of the file at `<path>`, relative to the program. Pushes an empty string if there's no such file|
+|`write <path> <text>`|Write `<text>` to the file at `<path>`, relative to the program, replacing what's there|
+|`= ~= < > <= >= <lhs> <rhs>`|Compare, pushing `1` or `0`. Numbers compare as numbers; if either side isn't one, both compare as text|
+|`& \| ^ <lhs> <rhs>`|And, or, xor, pushing `1` or `0`. Non-zero numbers and non-empty strings are true|
+|`~ <str>`|Not|
+|`+ - * / % ** <lhs> <rhs>`|Take a guess. Integers stay integers; anything involving a float, and every `/` and `**`, gives a float with 6 decimals. `+` joins text when either side isn't a number. Apart from `+`, an empty value counts as `0`|
+|`halt`|Halt (delete the whole code)|
+
+---
+
+## Input and Output
+
+Program arguments go after `--` and are pushed in order, so the last one ends up on top: `i4 prog.i4 -- first second`.
+
+When the code stack runs out, the top of the data stack is the program's result. A number becomes the exit code, `OK` or an empty stack exits with `0`, and any other text exits with `1`. The interpreter prints the result after the program's output as `Program finished with code: <result>`.
 
 ---
 
 ## Interpreter Flags
 
+```
+i4 [options] <file> [-- <program args>]
+```
+
 |Flag|Explanation|
-|---------------|-----------------------------------------------------------------------------------------------|
-|`-box`		|Create a new directory, copy the source code into it, and run the program from that directory	|
-|`-mem`	 	|Run the program inside a virtual, in-memory filesystem	 	 				|
-|`-step`	|Await user input before executing each instruction from the code stack	  			|
-|`-limit`	|Abort if the sizes of all i4 files combined is over 10MB					|
-|`-no-fs`	|Disable all filesystem instructions		 						|
-|`-safe`	|-no-fs and -limit combined	 								|
-|`-verbose`	|Output names of all executed instructions to stdout		 				|
-|`-debug`	|-mem, -step and -safe combined		 							|
-|`-help`	|Print help message		 								|
-|`-version`	|Print version info|
+|---|---|
+|`-box`, `-b`|Copy the program into a fresh `<name>.i4box` directory next to it and run it there, so the original survives. Only the program file is copied|
+|`-memory`, `-m`|Run inside a virtual, in-memory filesystem: the files around the program are loaded, and nothing is written to disk|
+|`-step`, `-S`|Wait for Enter before executing each instruction|
+|`-nofs`, `-F`|Disable `open` and `write` (they become ordinary words)|
+|`-safe`, `-s`|`-nofs`, plus abort if the program's `.i4` files grow past 16 MiB|
+|`-verbose`, `-v`|Print every token as it runs, in its internal reversed form|
+|`-debug`, `-d`|`-memory`, `-step` and `-safe` combined|
+|`-help`, `-h`|Print help message|
+|`-version`, `-V`|Print version info|
+
+---
+
+## Building
+
+You need [Ninja](https://ninja-build.org), `clang++`, `llvm-ar` and a POSIX `sh` (Git Bash works on Windows). Git is optional, for the version string.
+
+```sh
+ninja                   # builds build/i4 (build/i4.exe on Windows)
+scripts/run_tests.sh    # runs the programs in tests/ and checks their output
+```
 
 ---
 
