@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 
 namespace Words {
     inline static constexpr std::string_view Def            = "fed";

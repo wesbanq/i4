@@ -6,6 +6,9 @@
 #include <filesystem>
 #include <stdexcept>
 #include <string>
+#include <cstdio>
+#include <iostream>
+#include <utility>
 
 namespace {
 

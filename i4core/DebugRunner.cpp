@@ -2,6 +2,7 @@
 #include "Interpreter.h"
 #include "Option.h"
 #include "StackFile.h"
+#include <cstdio>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -10,6 +11,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <system_error>
+#include <utility>
 
 namespace {
 

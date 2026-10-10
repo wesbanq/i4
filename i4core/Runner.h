@@ -1,7 +1,10 @@
 #pragma once
 
 #include "IRunner.h"
+#include <cstdint>
 #include <filesystem>
+#include <ios>
+#include <string>
 #include <vector>
 
 class Runner final : public IRunner {

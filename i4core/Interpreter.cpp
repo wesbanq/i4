@@ -1,8 +1,16 @@
 #include "Interpreter.h"
 #include "IFileSystem.h"
+#include <algorithm>
 #include <charconv>
+#include <cmath>
+#include <cstdint>
 #include <iostream>
 #include <iterator>
+#include <memory>
+#include <stdexcept>
+#include <string_view>
+#include <system_error>
+#include <utility>
 #include <vector>
 
 namespace {

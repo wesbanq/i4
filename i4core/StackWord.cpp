@@ -1,4 +1,6 @@
 #include "StackWord.h"
+#include <cstddef>
+#include <utility>
 
 bool StackWord::IsSeparator(char c) {
     switch (c) {

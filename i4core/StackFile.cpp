@@ -1,6 +1,9 @@
 #include "StackFile.h"
 #include "IFileSystem.h"
 #include <iostream>
+#include <memory>
+#include <stdexcept>
+#include <string>
 
 namespace {
 

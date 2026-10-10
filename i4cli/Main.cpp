@@ -11,6 +11,8 @@
 #include <string_view>
 #include <vector>
 #include <array>
+#include <system_error>
+#include <utility>
 
 #if __has_include("I4Version.h")
 #include "I4Version.h"

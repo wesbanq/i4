@@ -2,7 +2,10 @@
 
 #include "StackWord.h"
 #include "IFileSystem.h"
+#include <cstdint>
+#include <filesystem>
 #include <string_view>
+#include <utility>
 
 class StackFile {
 private:

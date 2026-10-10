@@ -3,6 +3,7 @@
 #include "IRunner.h"
 #include <cstdint>
 #include <filesystem>
+#include <ios>
 #include <iosfwd>
 #include <map>
 #include <string>
