@@ -128,7 +128,7 @@ i4 [options] <file> [-- <program args>]
 |Flag|Explanation|
 |---|---|
 |`-box`, `-b`|Copy the program into a fresh `<name>.i4box` directory next to it and run it there, so the original survives. Only the program file is copied|
-|`-memory`, `-m`|Run inside a virtual, in-memory filesystem: files are read from disk the first time they're used, and nothing is written to disk|
+|`-memory`, `-m`|Run inside a virtual, in-memory filesystem: the i4 files in the current directory are read at startup, any other file the first time it's used, and nothing is written to disk|
 |`-step`, `-S`|Wait for Enter before executing each instruction|
 |`-nofs`, `-F`|Disable `open` and `write` (they become ordinary words)|
 |`-safe`, `-s`|`-nofs`, plus abort if the `.i4` files under the program's directory grow past 16 MiB|

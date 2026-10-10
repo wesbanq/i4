@@ -1,4 +1,5 @@
 #include "DebugRunner.h"
+#include "StackFile.h"
 #include <algorithm>
 #include <cstddef>
 #include <filesystem>
@@ -92,7 +93,27 @@ bool IsWithin(const std::filesystem::path& path, const std::filesystem::path& di
     return std::mismatch(dir.begin(), dir.end(), path.begin(), path.end()).first == dir.end();
 }
 
+/// Program, stack, definition and label files. Definition and label names can contain dots,
+/// so those are matched anywhere in the name rather than by extension.
+bool IsI4File(const std::filesystem::path& path) {
+    const std::string extension = path.extension().string();
+    const std::string name = path.filename().string();
+    return extension == StackFile::CodeExtension
+        || extension == StackFile::StackExtension
+        || name.find(StackFile::DefExtension) != std::string::npos
+        || name.find(StackFile::LabelExtension) != std::string::npos;
+}
+
 } // namespace
+
+void DebugRunner::Preload(const std::filesystem::path& dir) {
+    std::error_code ec;
+    for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(
+             dir, std::filesystem::directory_options::skip_permission_denied, ec)) {
+        if (entry.is_regular_file(ec) && IsI4File(entry.path()))
+            Load(Key(entry.path()));
+    }
+}
 
 bool DebugRunner::IsHidden(const std::filesystem::path& key) const {
     return std::any_of(Removed.begin(), Removed.end(),

@@ -128,6 +128,7 @@ int main(int argc, char* argv[]) {
 	try {
 		if (Interpreter::HasOption(options, Option::MEMORY)) {
 			DebugRunner debugRunner;
+			debugRunner.Preload(std::filesystem::current_path());
 			result = debugRunner.Start(filenames[0], options, std::cout, programArgs);
 		} else {
 			Runner runner;

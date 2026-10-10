@@ -12,6 +12,10 @@
 /// and every change stays in memory, so nothing is ever written to disk.
 class DebugRunner final : public IRunner {
 public:
+    /// Reads every i4 file (program, stack, definition and label files) directly in dir
+    /// right away, so the run sees them as they were at startup.
+    void Preload(const std::filesystem::path& dir);
+
     bool exists(const std::filesystem::path& path) const override;
     void resize_file(const std::filesystem::path& path, std::uintmax_t size) const override;
     FileSystemOpenStream open(const std::filesystem::path& path, std::ios::openmode mode) const override;
