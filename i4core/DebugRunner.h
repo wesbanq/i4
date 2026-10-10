@@ -4,32 +4,30 @@
 #include <cstdint>
 #include <filesystem>
 #include <ios>
-#include <iosfwd>
 #include <map>
 #include <string>
 #include <vector>
 
+/// Runs programs in memory. A file is read from disk the first time it's used,
+/// and every change stays in memory, so nothing is ever written to disk.
 class DebugRunner final : public IRunner {
 public:
-    /// Keys are lexically normalized paths (see lookups in the implementation).
-    mutable std::map<std::filesystem::path, std::string> files;
-
-    explicit DebugRunner(std::map<std::filesystem::path, std::string> initialFiles = {});
-
-    /// Load all regular files under the main file's parent directory (or cwd if none) into the map,
-    /// using paths relative to the current directory as keys (matches interpreter path lookups).
-    static DebugRunner fromFilesystemAround(const std::filesystem::path& mainFile);
-
     bool exists(const std::filesystem::path& path) const override;
     void resize_file(const std::filesystem::path& path, std::uintmax_t size) const override;
     FileSystemOpenStream open(const std::filesystem::path& path, std::ios::openmode mode) const override;
     std::uintmax_t file_size(const std::filesystem::path& path) const override;
-
-    ReturnCode Start(std::filesystem::path mainFile,
-                     unsigned char options,
-                     std::ostream& output,
-                     const std::vector<std::string>& programArgs) const override;
+    void create_directories(const std::filesystem::path& path) const override;
+    void remove_all(const std::filesystem::path& path) const override;
+    std::vector<std::filesystem::path> files_under(const std::filesystem::path& dir) const override;
 
 private:
-    void enforceSafeCodeFileBudget(const std::filesystem::path& mainFile) const;
+    /// Files read from disk or written so far, keyed by absolute, normalized path.
+    mutable std::map<std::filesystem::path, std::string> Files;
+    /// Directories removed in memory; the disk files under them stay hidden.
+    mutable std::vector<std::filesystem::path> Removed;
+
+    bool IsHidden(const std::filesystem::path& key) const;
+    bool IsOnDisk(const std::filesystem::path& key) const;
+    /// The file's content, read from disk on first use, or nullptr if there's no such file.
+    std::string* Load(const std::filesystem::path& key) const;
 };

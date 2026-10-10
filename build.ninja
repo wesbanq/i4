@@ -42,13 +42,14 @@ rule link
 build $builddir/I4Version.h: gen_version i4cli/I4Version.h.in | scripts/gen_version.sh
 
 build $builddir/i4core/Interpreter.o: cxx i4core/Interpreter.cpp
+build $builddir/i4core/IRunner.o: cxx i4core/IRunner.cpp
 build $builddir/i4core/Runner.o: cxx i4core/Runner.cpp
 build $builddir/i4core/DebugRunner.o: cxx i4core/DebugRunner.cpp
 build $builddir/i4core/StackFile.o: cxx i4core/StackFile.cpp
 build $builddir/i4core/StackWord.o: cxx i4core/StackWord.cpp
 build $builddir/i4cli/Main.o: cxx i4cli/Main.cpp | $builddir/I4Version.h
 
-build $builddir/i4core/libi4core.a: ar $builddir/i4core/Interpreter.o $builddir/i4core/Runner.o $builddir/i4core/DebugRunner.o $builddir/i4core/StackFile.o $builddir/i4core/StackWord.o
+build $builddir/i4core/libi4core.a: ar $builddir/i4core/Interpreter.o $builddir/i4core/IRunner.o $builddir/i4core/Runner.o $builddir/i4core/DebugRunner.o $builddir/i4core/StackFile.o $builddir/i4core/StackWord.o
 
 build $builddir/i4.stamp: link $builddir/i4cli/Main.o $builddir/i4core/libi4core.a | scripts/link.sh
   bin = $builddir/i4

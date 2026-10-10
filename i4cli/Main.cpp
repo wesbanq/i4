@@ -11,7 +11,6 @@
 #include <string_view>
 #include <vector>
 #include <array>
-#include <system_error>
 #include <utility>
 
 #if __has_include("I4Version.h")
@@ -128,14 +127,8 @@ int main(int argc, char* argv[]) {
 	ReturnCode result;
 	try {
 		if (Interpreter::HasOption(options, Option::MEMORY)) {
-			DebugRunner debugRunner = DebugRunner::fromFilesystemAround(filenames[0]);
-			std::error_code ec;
-			const std::filesystem::path cwd = std::filesystem::current_path();
-			const std::filesystem::path mainAbs = std::filesystem::weakly_canonical(filenames[0]);
-			std::filesystem::path mainPath = std::filesystem::relative(mainAbs, cwd, ec);
-			if (ec)
-				mainPath = std::filesystem::path(filenames[0]);
-			result = debugRunner.Start(mainPath, options, std::cout, programArgs);
+			DebugRunner debugRunner;
+			result = debugRunner.Start(filenames[0], options, std::cout, programArgs);
 		} else {
 			Runner runner;
 			result = runner.Start(filenames[0], options, std::cout, programArgs);

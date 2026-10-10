@@ -8,6 +8,8 @@
 #include <string_view>
 #include <vector>
 
+/// Runs programs on top of the filesystem operations a subclass provides,
+/// so -box and -safe work the same on disk and in memory.
 class IRunner : public IFileSystem {
 public:
     static constexpr unsigned SafeCodeFilesLimitMb = 16;
@@ -15,8 +17,11 @@ public:
 
     ~IRunner() override = default;
 
-    virtual ReturnCode Start(std::filesystem::path mainFile,
-                             unsigned char options,
-                             std::ostream& output,
-                             const std::vector<std::string>& programArgs) const = 0;
+    ReturnCode Start(std::filesystem::path mainFile,
+                     unsigned char options,
+                     std::ostream& output,
+                     const std::vector<std::string>& programArgs) const;
+
+private:
+    void EnforceSafeCodeFileBudget(const std::filesystem::path& mainFile) const;
 };
