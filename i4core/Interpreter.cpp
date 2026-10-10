@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
+#include <functional>
 #include <iostream>
 #include <iterator>
 #include <limits>
@@ -23,11 +24,8 @@ enum class NumKind { Int, Float, NaN };
 
 /// Converts like a cast, but saturates where a cast would be undefined behavior.
 std::int64_t ClampToInt(long double d) {
-	if (d >= static_cast<long double>(std::numeric_limits<std::int64_t>::max()))
-		return std::numeric_limits<std::int64_t>::max();
-	if (d <= static_cast<long double>(std::numeric_limits<std::int64_t>::min()))
-		return std::numeric_limits<std::int64_t>::min();
-	return static_cast<std::int64_t>(d);
+	using Limits = std::numeric_limits<std::int64_t>;
+	return d >= Limits::max() ? Limits::max() : d <= Limits::min() ? Limits::min() : static_cast<std::int64_t>(d);
 }
 
 /// Parses all of s as a long double, accepting exactly what std::from_chars would (no leading
@@ -37,18 +35,11 @@ bool ParseLongDouble(const std::string& s, long double& out) {
 	if (s.empty() || std::isspace(static_cast<unsigned char>(s[0])) || s[0] == '+'
 		|| s.find_first_of("xX") != std::string::npos)
 		return false;
-
 	errno = 0;
-	char* end = nullptr;
-	const long double value = std::strtold(s.c_str(), &end);
-	if (end != s.c_str() + s.size())
-		return false;
-	// Too large, or too small to be anything but zero; tiny subnormal values are fine.
-	if (errno == ERANGE && (value == 0 || value == HUGE_VALL || value == -HUGE_VALL))
-		return false;
-
-	out = value;
-	return true;
+	char* end;
+	out = std::strtold(s.c_str(), &end);
+	// Out of range means too large, or too small to be anything but zero; tiny subnormal values are fine.
+	return end == s.c_str() + s.size() && !(errno == ERANGE && (out == 0 || std::isinf(out)));
 }
 
 struct ParsedNum {
@@ -95,9 +86,7 @@ std::size_t Wrap(std::int64_t index, std::size_t length) {
 /// Per the README: numbers are true when non-zero, anything else when non-empty.
 bool IsTrue(const StackWord& word) {
 	const auto num = ParsedNum(word.Word);
-	if (num.kind == NumKind::NaN)
-		return !word.Word.empty();
-	return num.d != 0;
+	return num.kind == NumKind::NaN ? !word.Word.empty() : num.d != 0;
 }
 
 } // namespace
@@ -243,43 +232,27 @@ void Interpreter::Step() {
 		return;
 	}
 	if (word.Word == Words::Index) {
-		auto idx = DataFile.PopWord();
-		auto str = DataFile.PopWord();
-		auto idxNum = ParsedNum(idx.Word);
-		if (idxNum.kind == NumKind::NaN || str.Word.empty()) {
+		const auto idx = ParsedNum(DataFile.PopWord().Word);
+		const auto str = DataFile.PopWord().Word;
+		if (idx.kind == NumKind::NaN || str.empty())
 			DataFile.PushEmpty();
-			return;
-		}
-
-		DataFile << StackWord(std::string(1, str.Word[Wrap(idxNum.i, str.Word.length())]), true);
+		else
+			DataFile << StackWord(std::string(1, str[Wrap(idx.i, str.length())]), true);
 		return;
 	}
 	if (word.Word == Words::Slice) {
-		auto start = DataFile.PopWord();
-		auto end = DataFile.PopWord();
-		auto str = DataFile.PopWord();
+		const auto start = ParsedNum(DataFile.PopWord().Word);
+		const auto end = ParsedNum(DataFile.PopWord().Word);
+		const auto str = DataFile.PopWord().Word;
+		const auto length = str.length();
+		if (length == 0)
+			return DataFile.PushEmpty();
 
-		if (str.Word.empty()) {
-			DataFile.PushEmpty();
-			return;
-		}
-
-		// Both ends wrap like @, except that an end equal to the length means "to the end".
-		const auto length = str.Word.length();
-		const auto startNum = ParsedNum(start.Word);
-		const auto endNum = ParsedNum(end.Word);
-		const auto from = startNum.kind == NumKind::NaN ? 0 : Wrap(startNum.i, length);
-		const auto to = endNum.kind == NumKind::NaN || endNum.i == static_cast<std::int64_t>(length)
-			? length
-			: Wrap(endNum.i, length);
-
-		// A start past the end wraps around the end of the string.
-		auto newStr = from <= to
-			? str.Word.substr(from, to - from)
-			: str.Word.substr(from) + str.Word.substr(0, to);
-
-		DataFile << StackWord(std::move(newStr), true);
-
+		// Both ends wrap like @, except that an end equal to the length means "to the end",
+		// and a start past the end wraps around the end of the string.
+		const auto from = start.kind == NumKind::NaN ? 0 : Wrap(start.i, length);
+		const auto to = end.kind == NumKind::NaN || end.i == static_cast<std::int64_t>(length) ? length : Wrap(end.i, length);
+		DataFile << StackWord(from <= to ? str.substr(from, to - from) : str.substr(from) + str.substr(0, to), true);
 		return;
 	}
 	if (word.Word == Words::Split) {
@@ -320,12 +293,10 @@ void Interpreter::Step() {
 		auto rhs = ParsedNum(rhsW.Word);
 		auto lhs = ParsedNum(lhsW.Word);
 
-		if (lhs.kind == NumKind::NaN || rhs.kind == NumKind::NaN) {
+		if (lhs.kind == NumKind::NaN || rhs.kind == NumKind::NaN)
 			DataFile.PushEmpty();
-			return;
-		}
-
-		op(rhs, lhs);
+		else
+			op(rhs, lhs);
 	};
 
 	if (word.Word == Words::Add) {
@@ -364,12 +335,10 @@ void Interpreter::Step() {
 	}
 	if (word.Word == Words::Div) {
 		doBinaryArithmetic([this](const ParsedNum& lhs, const ParsedNum& rhs) {
-			if (rhs.d == 0) {
+			if (rhs.d == 0)
 				DataFile.PushEmpty();
-				return;
-			}
-
-			DataFile << ToStackWord(lhs.d / rhs.d);
+			else
+				DataFile << ToStackWord(lhs.d / rhs.d);
 		});
 		return;
 	}
@@ -386,85 +355,41 @@ void Interpreter::Step() {
 	}
 	if (word.Word == Words::Pow) {
 		doBinaryArithmetic([this](const ParsedNum& lhs, const ParsedNum& rhs) {
-			if (lhs.d == 0.0L && rhs.d < 0.0L) {
+			if (lhs.d == 0.0L && rhs.d < 0.0L)
 				DataFile.PushEmpty();
-				return;
-			}
-			DataFile << ToStackWord(std::pow(lhs.d, rhs.d));
+			else
+				DataFile << ToStackWord(std::pow(lhs.d, rhs.d));
 		});
 		return;
 	}
 
-	// Numbers compare as numbers; if either side isn't one, both compare as text.
+	// Numbers compare as numbers; if either side isn't one, both compare as text. Empty counts as 0.
 	auto doCompare = [this](auto cmp) {
-		auto lhsW = DataFile.PopWord();
-		auto rhsW = DataFile.PopWord();
-
-		if (lhsW.Word.empty())
-			lhsW = StackWord("0", true);
-		if (rhsW.Word.empty())
-			rhsW = StackWord("0", true);
-
-		const auto lhs = ParsedNum(lhsW.Word);
-		const auto rhs = ParsedNum(rhsW.Word);
-
-		bool result;
-		if (lhs.kind == NumKind::NaN || rhs.kind == NumKind::NaN)
-			result = cmp(lhsW.Word, rhsW.Word);
-		else if (lhs.kind == NumKind::Float || rhs.kind == NumKind::Float)
-			result = cmp(lhs.d, rhs.d);
-		else
-			result = cmp(lhs.i, rhs.i);
+		auto lhsW = DataFile.PopWord().Word;
+		auto rhsW = DataFile.PopWord().Word;
+		if (lhsW.empty()) lhsW = "0";
+		if (rhsW.empty()) rhsW = "0";
+		const ParsedNum lhs(lhsW), rhs(rhsW);
+		const bool result = lhs.kind == NumKind::NaN || rhs.kind == NumKind::NaN ? cmp(lhsW, rhsW)
+			: lhs.kind == NumKind::Float || rhs.kind == NumKind::Float ? cmp(lhs.d, rhs.d)
+			: cmp(lhs.i, rhs.i);
 		DataFile << ToStackWord(result ? 1 : 0);
 	};
-
-	if (word.Word == Words::Eq) {
-		doCompare([](const auto& lhs, const auto& rhs) { return lhs == rhs; });
-		return;
-	}
-	if (word.Word == Words::Neq) {
-		doCompare([](const auto& lhs, const auto& rhs) { return lhs != rhs; });
-		return;
-	}
-	if (word.Word == Words::Lt) {
-		doCompare([](const auto& lhs, const auto& rhs) { return lhs < rhs; });
-		return;
-	}
-	if (word.Word == Words::Gt) {
-		doCompare([](const auto& lhs, const auto& rhs) { return lhs > rhs; });
-		return;
-	}
-	if (word.Word == Words::Le) {
-		doCompare([](const auto& lhs, const auto& rhs) { return lhs <= rhs; });
-		return;
-	}
-	if (word.Word == Words::Ge) {
-		doCompare([](const auto& lhs, const auto& rhs) { return lhs >= rhs; });
-		return;
-	}
+	if (word.Word == Words::Eq) return doCompare(std::equal_to<>());
+	if (word.Word == Words::Neq) return doCompare(std::not_equal_to<>());
+	if (word.Word == Words::Lt) return doCompare(std::less<>());
+	if (word.Word == Words::Gt) return doCompare(std::greater<>());
+	if (word.Word == Words::Le) return doCompare(std::less_equal<>());
+	if (word.Word == Words::Ge) return doCompare(std::greater_equal<>());
 
 	auto doLogic = [this](auto op) {
-		const bool rhs = IsTrue(DataFile.PopWord());
-		const bool lhs = IsTrue(DataFile.PopWord());
+		const bool rhs = IsTrue(DataFile.PopWord()), lhs = IsTrue(DataFile.PopWord());
 		DataFile << ToStackWord(op(lhs, rhs) ? 1 : 0);
 	};
-
-	if (word.Word == Words::LogicAnd) {
-		doLogic([](bool lhs, bool rhs) { return lhs && rhs; });
-		return;
-	}
-	if (word.Word == Words::LogicOr) {
-		doLogic([](bool lhs, bool rhs) { return lhs || rhs; });
-		return;
-	}
-	if (word.Word == Words::LogicXor) {
-		doLogic([](bool lhs, bool rhs) { return lhs != rhs; });
-		return;
-	}
-	if (word.Word == Words::LogicNot) {
-		DataFile << ToStackWord(IsTrue(DataFile.PopWord()) ? 0 : 1);
-		return;
-	}
+	if (word.Word == Words::LogicAnd) return doLogic(std::logical_and<>());
+	if (word.Word == Words::LogicOr) return doLogic(std::logical_or<>());
+	if (word.Word == Words::LogicXor) return doLogic(std::not_equal_to<>());
+	if (word.Word == Words::LogicNot) return DataFile.PushWord(ToStackWord(IsTrue(DataFile.PopWord()) ? 0 : 1));
 	
 	if (!HasOption(Option::NOFS)) {
 		if (word.Word == Words::Open) {

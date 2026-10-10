@@ -20,49 +20,32 @@ bool EndsEscapeUnit(const std::string& s, std::size_t pos) {
 /// half) gets its stray quotes and backslashes encoded, keeping its existing units. Other content
 /// is returned unchanged.
 std::string SafeLiteralContent(const std::string& s) {
+    // Built right to left, then reversed; \X\ units read the same both ways.
+    std::string out;
     bool hasStrayQuote = false;
     for (std::size_t i = s.size(); i-- > 0;) {
         if (EndsEscapeUnit(s, i))
-            i -= 2;
-        else if (s[i] == StackWord::Quote) {
-            hasStrayQuote = true;
-            break;
-        }
-    }
-    if (!hasStrayQuote)
-        return s;
-
-    // Built right to left, then reversed; \X\ units read the same both ways.
-    std::string out;
-    for (std::size_t i = s.size(); i-- > 0;) {
-        if (EndsEscapeUnit(s, i)) {
-            out.append(s, i - 2, 3);
-            i -= 2;
-        } else if (s[i] == StackWord::Quote || s[i] == StackWord::EscapeChar) {
-            out += StackWord::EscapeChar;
+            out.append(s, i -= 2, 3);
+        else if (s[i] == StackWord::Quote || s[i] == StackWord::EscapeChar) {
+            hasStrayQuote |= s[i] == StackWord::Quote;
+            out += { StackWord::EscapeChar, s[i], StackWord::EscapeChar };
+        } else
             out += s[i];
-            out += StackWord::EscapeChar;
-        } else {
-            out += s[i];
-        }
     }
     std::reverse(out.begin(), out.end());
-    return out;
+    return hasStrayQuote ? out : s;
 }
 
 /// Whether s reads back as the same single bare word: no separator outside a \X\ unit, and no
 /// trailing quote (which would start a literal). An empty word is written as nothing, as before.
 bool IsSafeBareWord(const std::string& s) {
-    if (s.empty())
-        return true;
-    if (s.back() == StackWord::Quote)
+    if (!s.empty() && s.back() == StackWord::Quote)
         return false;
-    for (std::size_t i = s.size(); i-- > 0;) {
+    for (std::size_t i = s.size(); i-- > 0;)
         if (EndsEscapeUnit(s, i))
             i -= 2;
         else if (StackWord::IsSeparator(s[i]))
             return false;
-    }
     return true;
 }
 
@@ -77,12 +60,9 @@ FileSystemOpenStream StackFile::GetFile() const {
 
 std::pair<StackWord, unsigned int> StackFile::PeekWord() const {
     auto file = GetFile();
-    if (!file || !file->good())
-        return {{ "", false }, 0};
-
-    const auto size = static_cast<std::intmax_t>(Size());
+    const std::intmax_t size = file && file->good() ? Size() : 0;
     if (size <= 0)
-        return {{ "", false }, 0};
+        return {};
 
     // The end of the file is loaded in chunks that double as the scan moves left,
     // so reading a word costs about its own length.
@@ -90,16 +70,15 @@ std::pair<StackWord, unsigned int> StackFile::PeekWord() const {
     std::intmax_t tailStart = size;
     auto at = [&](std::intmax_t pos) {
         if (pos < tailStart) {
-            const std::intmax_t want = std::max<std::intmax_t>(256, 2 * (size - tailStart));
-            const std::intmax_t start = std::max<std::intmax_t>(0, std::min(pos, size - want));
-            std::string chunk(static_cast<std::size_t>(tailStart - start), '\0');
+            const std::intmax_t start = std::max<std::intmax_t>(0, std::min(pos, size - std::max<std::intmax_t>(256, 2 * (size - tailStart))));
+            std::string chunk(tailStart - start, '\0');
             file->clear();
-            file->seekg(static_cast<std::streamoff>(start), std::ios::beg);
-            file->read(chunk.data(), static_cast<std::streamsize>(chunk.size()));
+            file->seekg(start);
+            file->read(chunk.data(), chunk.size());
             tail.insert(0, chunk);
             tailStart = start;
         }
-        return tail[static_cast<std::size_t>(pos - tailStart)];
+        return tail[pos - tailStart];
     };
     auto endsEscapeUnit = [&](std::intmax_t pos) {
         return pos >= 2 && at(pos) == StackWord::EscapeChar && at(pos - 2) == StackWord::EscapeChar;
@@ -116,29 +95,21 @@ std::pair<StackWord, unsigned int> StackFile::PeekWord() const {
     // \X\ units are skipped whole, so an escaped quote can't end it. With no opening quote
     // before the start of the file, the quote is an ordinary character.
     std::intmax_t first = -1;
-    bool literal = false;
-    if (at(last) == StackWord::Quote) {
-        for (std::intmax_t pos = last - 1; pos >= 0; --pos) {
-            if (endsEscapeUnit(pos)) {
-                pos -= 2;
-            } else if (at(pos) == StackWord::Quote) {
+    if (at(last) == StackWord::Quote)
+        for (std::intmax_t pos = last - 1; pos >= 0 && first < 0; pos -= endsEscapeUnit(pos) ? 3 : 1)
+            if (at(pos) == StackWord::Quote)
                 first = pos;
-                literal = true;
-                break;
-            }
-        }
-    }
+    const bool literal = first >= 0;
     if (!literal) {
-        std::intmax_t pos = last;
-        while (pos >= 0 && (endsEscapeUnit(pos) || !StackWord::IsSeparator(at(pos))))
-            pos -= endsEscapeUnit(pos) ? 3 : 1;
-        first = pos + 1;
+        first = last;
+        while (first >= 0 && (endsEscapeUnit(first) || !StackWord::IsSeparator(at(first))))
+            first -= endsEscapeUnit(first) ? 3 : 1;
+        ++first;
     }
 
-    // In memory a word is reversed, the order it was read in.
+    // In memory a word is reversed, the order it was read in; a literal leaves out its quotes.
     std::string word;
-    const std::intmax_t contentFirst = literal ? first + 1 : first;
-    for (std::intmax_t pos = literal ? last - 1 : last; pos >= contentFirst; --pos)
+    for (std::intmax_t pos = last - literal; pos >= first + literal; --pos)
         word.push_back(at(pos));
 
     // Separators before the word go with it too, except one at the very start of the file.

@@ -37,10 +37,8 @@ void Runner::remove_all(const std::filesystem::path& path) const {
 
 std::vector<std::filesystem::path> Runner::files_under(const std::filesystem::path& dir) const {
     std::vector<std::filesystem::path> files;
-    for (const std::filesystem::directory_entry& entry : std::filesystem::recursive_directory_iterator(
-             dir, std::filesystem::directory_options::skip_permission_denied)) {
+    for (const auto& entry : std::filesystem::recursive_directory_iterator(dir, std::filesystem::directory_options::skip_permission_denied))
         if (entry.is_regular_file())
             files.push_back(entry.path());
-    }
     return files;
 }
