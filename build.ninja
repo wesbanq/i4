@@ -11,7 +11,8 @@
 # Requires: clang++, llvm-ar (LLVM bin on PATH). Git in PATH for version strings (optional).
 # Keep compile_flags.txt and compile_commands.json in sync with cflags / cxx rules (clangd).
 #
-# Version: scripts/I4Version.h.in + sh/sed (git describe, else unknown) -> $builddir/I4Version.h
+# Version: i4cli/I4Version.h.in + scripts/gen_version.sh (git describe, else unknown) -> $builddir/I4Version.h
+# Binary: $builddir/i4, or $builddir/i4.exe when $cxx targets Windows (scripts/link.sh decides).
 
 builddir = build
 
@@ -20,7 +21,7 @@ ar = llvm-ar
 cflags = -std=c++20 -O0 -g -Wall -Wextra -I i4core -I $builddir
 
 rule gen_version
-  command = sh -c "mkdir -p $builddir && V=$$(git describe --always --dirty 2>/dev/null); [ -z \"$$V\" ] && V=unknown; sed \"s|@@VERSION@@|$$V|g\" i4cli/I4Version.h.in > $out"
+  command = sh scripts/gen_version.sh $in $out
   description = GEN I4Version.h
   restat = 1
 
@@ -35,10 +36,10 @@ rule ar
   description = AR $out
 
 rule link
-  command = $cxx -o $out $in
-  description = LINK $out
+  command = sh scripts/link.sh $cxx $bin $out $in
+  description = LINK $bin
 
-build $builddir/I4Version.h: gen_version i4cli/I4Version.h.in
+build $builddir/I4Version.h: gen_version i4cli/I4Version.h.in | scripts/gen_version.sh
 
 build $builddir/i4core/Interpreter.o: cxx i4core/Interpreter.cpp
 build $builddir/i4core/Runner.o: cxx i4core/Runner.cpp
@@ -49,6 +50,9 @@ build $builddir/i4cli/Main.o: cxx i4cli/Main.cpp | $builddir/I4Version.h
 
 build $builddir/i4core/libi4core.a: ar $builddir/i4core/Interpreter.o $builddir/i4core/Runner.o $builddir/i4core/DebugRunner.o $builddir/i4core/StackFile.o $builddir/i4core/StackWord.o
 
-build $builddir/i4.exe: link $builddir/i4cli/Main.o $builddir/i4core/libi4core.a
+build $builddir/i4.stamp: link $builddir/i4cli/Main.o $builddir/i4core/libi4core.a | scripts/link.sh
+  bin = $builddir/i4
 
-default $builddir/i4.exe
+build i4: phony $builddir/i4.stamp
+
+default i4
