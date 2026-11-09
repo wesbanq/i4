@@ -9,6 +9,7 @@
 #include <cstdlib>
 #include <tuple>
 #include <string_view>
+#include <system_error>
 #include <vector>
 #include <array>
 #include <utility>
@@ -28,8 +29,8 @@ static void PrintHelp() {
 		"  -m, -memory     Run in an in-memory filesystem; nothing is written to disk\n"
 		"  -S, -step       Wait for Enter before executing each instruction\n"
 		"  -F, -nofs       Disable open and write\n"
-		"  -s, -safe       -nofs, and abort if the .i4 files under the program's directory\n"
-		"                  grow past " << IRunner::SafeCodeFilesLimitMb << " MiB\n"
+		"  -s, -safe       -nofs, and abort if the program's code, data stack, definitions\n"
+		"                  and labels grow past " << IRunner::SafeFilesLimitMb << " MiB in total\n"
 		"  -v, -verbose    Print every token as it runs\n"
 		"  -d, -debug      -memory, -step and -safe combined\n"
 		"  -h, -help       Show this help\n"
@@ -105,7 +106,8 @@ static std::tuple<std::vector<std::string>, unsigned char, std::vector<std::stri
 			}
 			options |= bits;
 		} else {
-			if (std::filesystem::exists(a)) {
+			std::error_code ec;
+			if (std::filesystem::exists(a, ec)) {
 				filenames.push_back(a);
 			} else {
 				std::cerr << "Could not locate file: \"" << a << "\".\n";

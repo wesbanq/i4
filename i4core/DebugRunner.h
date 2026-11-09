@@ -22,7 +22,7 @@ public:
     std::uintmax_t file_size(const std::filesystem::path& path) const override;
     void create_directories(const std::filesystem::path& path) const override;
     void remove_all(const std::filesystem::path& path) const override;
-    std::vector<std::filesystem::path> files_under(const std::filesystem::path& dir) const override;
+    std::vector<std::filesystem::path> files_in(const std::filesystem::path& dir) const override;
 
 private:
     /// Files read from disk or written so far, keyed by absolute, normalized path.

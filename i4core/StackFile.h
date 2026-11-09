@@ -2,6 +2,7 @@
 
 #include "StackWord.h"
 #include "IFileSystem.h"
+#include <cstddef>
 #include <cstdint>
 #include <filesystem>
 #include <string_view>
@@ -24,6 +25,7 @@ public:
     static constexpr std::string_view StackExtension = ".i4s";
     static constexpr std::string_view DefExtension = ".i4d_";
     static constexpr std::string_view LabelExtension = ".i4l_";
+    static constexpr std::size_t MaxFileNameLength = 255;
 
     StackFile(const IFileSystem& fs, std::filesystem::path filename, Kind kind = Kind::Code);
 
@@ -38,10 +40,15 @@ public:
     std::uintmax_t Size() const;
     std::filesystem::path GetPath() const;
 
+    /// The file of the definition or label called name, next to base. Bytes that aren't safe in
+    /// a file name everywhere are written as %XX, so no name can point outside base's directory.
     static StackFile Find(const IFileSystem& fs, 
                           const std::filesystem::path& base, 
                           const std::string_view name,
                           const std::string_view ext);
+    /// Whether the file name is short enough to exist. A definition or label whose name makes
+    /// it too long can't be created, so it's treated the same on disk and in memory.
+    bool HasUsableName() const;
 
     StackFile& operator<<(const StackWord& word);
     StackFile& operator<<(const StackFile& file);

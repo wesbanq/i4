@@ -21,6 +21,18 @@ StackWord::StackWord() : Word(), Literal(false) { }
 
 StackWord::StackWord(std::string word, bool literal) : Word(std::move(word)), Literal(literal) { }
 
+StackWord StackWord::Raw(std::string_view text) {
+    std::string word;
+    word.reserve(text.size());
+    for (const char c : text) {
+        if (c == Quote || c == EscapeChar)
+            word += { EscapeChar, c, EscapeChar };
+        else
+            word += c;
+    }
+    return StackWord(std::move(word), true);
+}
+
 std::string StackWord::Format() const {
     return Literal ? "\"" + Word + "\"" : Word;
 }
@@ -29,7 +41,7 @@ std::string StackWord::Escape() const {
     std::string out;
     out.reserve(Word.size());
     for (std::size_t i = 0; i < Word.size(); ++i) {
-        if (Word[i] != EscapeChar || Word[i+2] != EscapeChar || i + 1 >= Word.size()) {
+        if (Word[i] != EscapeChar || i + 2 >= Word.size() || Word[i + 2] != EscapeChar) {
             out.push_back(Word[i]);
             continue;
         }

@@ -2,6 +2,7 @@
 #include <fstream>
 #include <filesystem>
 #include <iostream>
+#include <system_error>
 
 namespace {
 
@@ -12,7 +13,9 @@ void deleteFstreamAsIostream(std::iostream* p) {
 } // namespace
 
 bool Runner::exists(const std::filesystem::path& path) const {
-    return std::filesystem::exists(path);
+    // A path that can't be looked up (a name that's too long, say) doesn't exist either.
+    std::error_code ec;
+    return std::filesystem::exists(path, ec);
 }
 
 void Runner::resize_file(const std::filesystem::path& path, std::uintmax_t size) const {
@@ -35,10 +38,11 @@ void Runner::remove_all(const std::filesystem::path& path) const {
     std::filesystem::remove_all(path);
 }
 
-std::vector<std::filesystem::path> Runner::files_under(const std::filesystem::path& dir) const {
+std::vector<std::filesystem::path> Runner::files_in(const std::filesystem::path& dir) const {
     std::vector<std::filesystem::path> files;
-    for (const auto& entry : std::filesystem::recursive_directory_iterator(dir, std::filesystem::directory_options::skip_permission_denied))
-        if (entry.is_regular_file())
+    std::error_code ec;
+    for (const auto& entry : std::filesystem::directory_iterator(dir, std::filesystem::directory_options::skip_permission_denied))
+        if (entry.is_regular_file(ec))
             files.push_back(entry.path());
     return files;
 }

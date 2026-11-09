@@ -53,6 +53,10 @@ struct StackWord {
     StackWord();
     StackWord(std::string word, bool literal = false);
 
+    /// A literal for text from outside the program (input, arguments, files). Its quotes and
+    /// backslashes are written as \"\ and \\\, so decoding it gives back exactly that text.
+    static StackWord Raw(std::string_view text);
+
     std::string Format() const;
     std::string Escape() const;
 };

@@ -7,6 +7,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 
 namespace {
 
@@ -47,6 +48,23 @@ bool IsSafeBareWord(const std::string& s) {
         else if (StackWord::IsSeparator(s[i]))
             return false;
     return true;
+}
+
+/// name as part of a file name: path separators, the characters Windows reserves, control
+/// characters and a trailing dot or space (which Windows drops) become %XX, and so does '%'.
+std::string EncodeName(std::string_view name) {
+    static constexpr std::string_view Unsafe = "/\\:*?\"<>|%";
+    static constexpr char Hex[] = "0123456789ABCDEF";
+    std::string out;
+    for (std::size_t i = 0; i < name.size(); ++i) {
+        const auto c = static_cast<unsigned char>(name[i]);
+        const bool dropped = i + 1 == name.size() && (c == '.' || c == ' ');
+        if (c < 0x20 || c == 0x7F || dropped || Unsafe.find(name[i]) != std::string_view::npos)
+            out += { '%', Hex[c >> 4], Hex[c & 15] };
+        else
+            out += name[i];
+    }
+    return out;
 }
 
 } // namespace
@@ -166,8 +184,12 @@ StackFile StackFile::Find(const IFileSystem& fs,
                           const std::string_view name,
                           const std::string_view ext) {
     std::filesystem::path p(base);
-    p.replace_extension(std::string(ext) + std::string(name));
+    p.replace_extension(std::string(ext) + EncodeName(name));
     return StackFile(fs, p);
+}
+
+bool StackFile::HasUsableName() const {
+    return Filename.filename().native().size() <= MaxFileNameLength;
 }
 
 StackFile& StackFile::operator<<(const StackWord& word) {

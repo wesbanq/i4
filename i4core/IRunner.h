@@ -12,7 +12,7 @@
 /// so -box and -safe work the same on disk and in memory.
 class IRunner : public IFileSystem {
 public:
-    static constexpr unsigned SafeCodeFilesLimitMb = 16;
+    static constexpr unsigned SafeFilesLimitMb = 16;
     static constexpr std::string_view BoxDirectorySuffix = ".i4box";
 
     ~IRunner() override = default;
@@ -21,7 +21,4 @@ public:
                      unsigned char options,
                      std::ostream& output,
                      const std::vector<std::string>& programArgs) const;
-
-private:
-    void EnforceSafeCodeFileBudget(const std::filesystem::path& mainFile) const;
 };

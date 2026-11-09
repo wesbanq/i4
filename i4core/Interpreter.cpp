@@ -105,11 +105,33 @@ Interpreter::Interpreter(const IFileSystem& fs,
 		if (!Fs.exists(CodeFilePath)) {
 			throw std::runtime_error("File does not exist: " + CodeFilePath.string());
 		}
+		if (!HasOption(Option::LIMIT))
+			return;
+
+		const auto defPrefix = StackFile::Find(Fs, CodeFilePath, "", StackFile::DefExtension).GetPath().filename().string();
+		const auto labelPrefix = StackFile::Find(Fs, CodeFilePath, "", StackFile::LabelExtension).GetPath().filename().string();
+		for (const auto& path : Fs.files_in(WorkDir.empty() ? "." : WorkDir)) {
+			const auto name = path.filename().string();
+			if (name.starts_with(defPrefix) || name.starts_with(labelPrefix))
+				NamedFilesSize += NamedFileSizes[name] = Fs.file_size(path);
+		}
 	}
+
+void Interpreter::TrackNamedFile(const StackFile& file) {
+	if (!HasOption(Option::LIMIT))
+		return;
+	auto& size = NamedFileSizes[file.GetPath().filename().string()];
+	NamedFilesSize -= size;
+	NamedFilesSize += size = file.Size();
+}
+
+std::uintmax_t Interpreter::FilesSize() const {
+	return CodeFile.Size() + (Fs.exists(DataFile.GetPath()) ? DataFile.Size() : 0) + NamedFilesSize;
+}
 
 void Interpreter::PushArgs(const std::vector<std::string>& args) {
 	for (const auto& arg : args)
-		DataFile << StackWord(arg, true);
+		DataFile << StackWord::Raw(arg);
 }
 
 ReturnCode Interpreter::PopResult() {
@@ -148,11 +170,14 @@ void Interpreter::Step() {
 			throw std::runtime_error("Definition name is empty");
 		
 		auto defFile = StackFile::Find(Fs, CodeFilePath, name.Word, StackFile::DefExtension);
+		if (!defFile.HasUsableName())
+			throw std::runtime_error("Definition name is too long");
 		meaning.Word = meaning.Escape();
 		meaning.Literal = false;
 		
 		defFile.Clear();
 		defFile << meaning;
+		TrackNamedFile(defFile);
 		return;
 	}
 	if (word.Word == Words::Label) {
@@ -161,8 +186,11 @@ void Interpreter::Step() {
 			throw std::runtime_error("Label name is empty");
 
 		auto labelFile = StackFile::Find(Fs, CodeFilePath, name.Word, StackFile::LabelExtension);
+		if (!labelFile.HasUsableName())
+			throw std::runtime_error("Label name is too long");
 		labelFile.Clear();
 		labelFile << CodeFile;
+		TrackNamedFile(labelFile);
 		return;
 	}
 	if (word.Word == Words::Jump) {
@@ -171,7 +199,7 @@ void Interpreter::Step() {
 			throw std::runtime_error("Jump target is empty");
 
 		auto labelFile = StackFile::Find(Fs, CodeFilePath, name.Word, StackFile::LabelExtension);
-		if (!Fs.exists(labelFile.GetPath()))
+		if (!labelFile.HasUsableName() || !Fs.exists(labelFile.GetPath()))
 			return;
 		CodeFile.Clear();
 		CodeFile << labelFile;
@@ -207,7 +235,7 @@ void Interpreter::Step() {
 		std::string line;
 		std::getline(std::cin, line);
 
-		DataFile << StackWord(std::move(line), true);
+		DataFile << StackWord::Raw(line);
 		return;
 	}
 	
@@ -347,7 +375,7 @@ void Interpreter::Step() {
 			if (rhs.d == 0)
 				DataFile.PushEmpty();
 			else if (lhs.kind == NumKind::Int && rhs.kind == NumKind::Int)
-				DataFile << ToStackWord(lhs.i % rhs.i);
+				DataFile << ToStackWord(rhs.i == -1 ? 0 : lhs.i % rhs.i);  // INT64_MIN % -1 traps
 			else
 				DataFile << ToStackWord(std::fmod(lhs.d, rhs.d));
 		});
@@ -407,7 +435,7 @@ void Interpreter::Step() {
 				throw std::runtime_error("Failed to open file for reading: " + path.string());
 			
 			std::string content((std::istreambuf_iterator<char>(*in)), std::istreambuf_iterator<char>());
-			DataFile << StackWord(std::move(content), true);
+			DataFile << StackWord::Raw(content);
 			return;
 		}
 		if (word.Word == Words::Write) {
@@ -427,7 +455,7 @@ void Interpreter::Step() {
 	}
 
 	auto def = StackFile::Find(Fs, CodeFilePath, word.Word, StackFile::DefExtension);
-	if (Fs.exists(def.GetPath())) {
+	if (def.HasUsableName() && Fs.exists(def.GetPath())) {
 		CodeFile << def;
 		return;
 	}

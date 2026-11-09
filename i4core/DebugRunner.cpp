@@ -165,17 +165,17 @@ void DebugRunner::remove_all(const std::filesystem::path& path) const {
     Removed.push_back(key);
 }
 
-std::vector<std::filesystem::path> DebugRunner::files_under(const std::filesystem::path& dir) const {
+std::vector<std::filesystem::path> DebugRunner::files_in(const std::filesystem::path& dir) const {
     const std::filesystem::path key = Key(dir);
     std::set<std::filesystem::path> found;
 
     std::error_code ec;
     if (std::filesystem::is_directory(key, ec))
-        for (const auto& entry : std::filesystem::recursive_directory_iterator(key, std::filesystem::directory_options::skip_permission_denied))
-            if (entry.is_regular_file() && !IsHidden(entry.path()))
+        for (const auto& entry : std::filesystem::directory_iterator(key, std::filesystem::directory_options::skip_permission_denied))
+            if (entry.is_regular_file(ec) && !IsHidden(entry.path()))
                 found.insert(entry.path());
     for (const auto& [path, content] : Files)
-        if (path != key && IsWithin(path, key))
+        if (path.parent_path() == key)
             found.insert(path);
     return { found.begin(), found.end() };
 }

@@ -20,7 +20,7 @@ Programs are written *backwards*. The interpreter reads tokens from the end of t
 
 Tokens are separated by whitespace. String literals are wrapped in quotes and pushed to the data stack. Anything unrecognised is also pushed as a string, making unknown tokens data rather than errors.
 
-For a program `prog.i4`, the data stack lives in `prog.i4s`, each definition in `prog.i4d_<name>` and each label in `prog.i4l_<name>`, all next to the program. Running a program consumes it: the code file is eaten as it runs, and the data stack, definitions and labels stay on disk afterwards, where the next run will find them. Use `-box` to run a copy instead, or `-memory` to keep everything in memory.
+For a program `prog.i4`, the data stack lives in `prog.i4s`, each definition in `prog.i4d_<name>` and each label in `prog.i4l_<name>`, all next to the program. Characters that can't go in a file name on every system (`/ \ : * ? " < > |`, `%`, control characters, and a `.` or space at the end) are written as `%XX` there, and a name too long for a file name can't be defined. Running a program consumes it: the code file is eaten as it runs, and the data stack, definitions and labels stay on disk afterwards, where the next run will find them. Use `-box` to run a copy instead, or `-memory` to keep everything in memory.
 
 ### Everything reads backwards
 
@@ -46,9 +46,11 @@ Escapes are written `\X\`, so they read the same in both directions:
 |`\\\`|Backslash|
 |`\"\`|Quote|
 
-Any other `\X\` is kept as is, and a lone `\` is just a backslash. A quote with nothing to close it is an ordinary character. Escapes work outside quotes too (`foo\n\bar`), and text from input, program arguments and files can safely contain quotes and backslashes.
+Any other `\X\` is kept as is, and a lone `\` is just a backslash. A quote with nothing to close it is an ordinary character. Escapes work outside quotes too (`foo\n\bar`).
 
-Escapes stay as they are on the stack and are only decoded when the text is used: printed (`.`), defined (`def`), run (`<<`), used as a file name or written to a file (`open`, `write`), or returned as the program's result. So `#`, `@` and `[:]` see the raw characters: `# "a\n\b"` is `5`.
+Text from input, program arguments and files is never read as escapes: its quotes and backslashes are put on the stack as `\"\` and `\\\`, so it prints and writes back exactly as it came in.
+
+Escapes stay as they are on the stack and are only decoded when the text is used: printed (`.`), defined (`def`), run (`<<`), used as a file name or written to a file (`open`, `write`), or returned as the program's result. So `#`, `@` and `[:]` see the raw characters: `# "a\n\b"` is `5`, and a line of input `a\b` has length `5` too.
 
 ---
 
@@ -131,7 +133,7 @@ i4 [options] <file> [-- <program args>]
 |`-memory`, `-m`|Run inside a virtual, in-memory filesystem: the i4 files in the current directory are read at startup, any other file the first time it's used, and nothing is written to disk|
 |`-step`, `-S`|Wait for Enter before executing each instruction|
 |`-nofs`, `-F`|Disable `open` and `write` (they become ordinary words)|
-|`-safe`, `-s`|`-nofs`, plus abort if the `.i4` files under the program's directory grow past 16 MiB|
+|`-safe`, `-s`|`-nofs`, plus abort if the program's own files (code, data stack, definitions and labels) grow past 16 MiB in total|
 |`-verbose`, `-v`|Print every token as it runs, in its internal reversed form|
 |`-debug`, `-d`|`-memory`, `-step` and `-safe` combined|
 |`-help`, `-h`|Print help message|
@@ -145,7 +147,7 @@ You need [Ninja](https://ninja-build.org), `clang++`, a POSIX `sh` (Git Bash wor
 
 ```sh
 ninja                   # builds build/i4 (build/i4.exe on Windows)
-scripts/run_tests.sh    # runs the programs in tests/ and checks their output
+scripts/run_tests.sh    # runs the programs in tests/, in memory and on disk, and checks their output
 ```
 
 ---
