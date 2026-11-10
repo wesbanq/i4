@@ -131,7 +131,7 @@ i4 [options] <file> [-- <program args>]
 |---|---|
 |`-box`, `-b`|Copy the program into a fresh `<name>.i4box` directory next to it and run it there, so the original survives. Only the program file is copied|
 |`-memory`, `-m`|Run inside a virtual, in-memory filesystem: the i4 files in the current directory are read at startup, any other file the first time it's used, and nothing is written to disk|
-|`-step`, `-S`|Wait for Enter before executing each instruction|
+|`-step`, `-S`|Wait for Enter before executing each instruction. When the program's input is redirected, Enter is read from the terminal instead, so stepping doesn't use up the input|
 |`-nofs`, `-F`|Disable `open` and `write` (they become ordinary words)|
 |`-safe`, `-s`|`-nofs`, plus abort if the program's own files (code, data stack, definitions and labels) grow past 16 MiB in total|
 |`-verbose`, `-v`|Print every token as it runs, in its internal reversed form|
