@@ -2,14 +2,15 @@
 # Usage: scripts/run_tests.sh [i4 binary]
 # Runs every tests/*.i4 twice, in memory (-m) and on disk, and compares stdout+stderr plus the
 # exit code with tests/<name>.expected. The runs happen in a throwaway copy of tests/, so the
-# programs here are never consumed.
+# programs here are never consumed. Carriage returns in the output are dropped, since a Windows
+# build prints CRLF line endings.
 # Optional per test: tests/<name>.in is fed to stdin, tests/<name>.args holds one program arg per
 # line, tests/<name>.flags holds extra interpreter flags.
 # Set UPDATE=1 to rewrite the .expected files from the current output instead of comparing.
 cd "$(dirname "$0")/.." || exit 1
 bin=${1:-$(cat build/i4.stamp 2>/dev/null)}
 [ -x "$bin" ] || { echo "No i4 binary found; run ninja first or pass its path." >&2; exit 1; }
-case $bin in /*) ;; *) bin=$PWD/$bin ;; esac
+case $bin in /*|[A-Za-z]:[\\/]*) ;; *) bin=$PWD/$bin ;; esac
 
 root=$PWD
 work=$(mktemp -d) || exit 1
@@ -35,13 +36,13 @@ for test in tests/*.i4; do
     [ -f "$name.args" ] && while IFS= read -r arg || [ -n "$arg" ]; do set -- "$@" "$arg"; done < "$name.args"
 
     if [ "${UPDATE:-0}" = 1 ]; then
-        run -m "$@" > "$root/$name.expected"
+        run -m "$@" | tr -d '\r' > "$root/$name.expected"
         continue
     fi
     expected=$(cat "$name.expected" 2>/dev/null)
     # In memory first: the run on disk consumes the copy.
     for mode in -m ""; do
-        actual=$(run "$mode" "$@")
+        actual=$(run "$mode" "$@" | tr -d '\r')
         if [ "$actual" = "$expected" ]; then
             passed=$((passed + 1))
         else

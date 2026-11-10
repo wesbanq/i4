@@ -1,0 +1,3 @@
+open|nofs.tmp|write|nofs.tmp|text|open|data/hello.dat|
+Program finished with code: OK
+[exit 0]

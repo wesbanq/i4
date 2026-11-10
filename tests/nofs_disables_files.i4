@@ -1,0 +1,1 @@
+. "|" . . "|" . . "|" . . "|" . . "|" . . "|" . . "|" . open "nofs.tmp" write "nofs.tmp" "text" open "data/hello.dat"

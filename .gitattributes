@@ -1,2 +1,4 @@
 # Build scripts run under sh; CRLF line endings (Git for Windows' default checkout) would break them.
 *.sh text eol=lf
+# Test programs, inputs and expected output are compared byte for byte.
+tests/** text eol=lf

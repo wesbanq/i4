@@ -58,3 +58,9 @@ x64/
 .clangd
 *.txt
 test/
+
+# What running an i4 program leaves behind: data stack, definitions, labels, -box copies
+*.i4s
+*.i4d_*
+*.i4l_*
+*.i4box/
