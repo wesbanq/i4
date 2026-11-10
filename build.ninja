@@ -12,6 +12,7 @@
 # Keep compile_flags.txt and compile_commands.json in sync with cflags / cxx rules (clangd).
 #
 # Version: i4cli/I4Version.h.in + scripts/gen_version.sh (git describe, else unknown) -> $builddir/I4Version.h
+# The script runs on every build so the version follows new commits; it only rewrites the header on a change.
 # Binary: $builddir/i4, or $builddir/i4.exe when $cxx targets Windows (scripts/link.sh decides).
 
 builddir = build
@@ -39,7 +40,10 @@ rule link
   command = sh scripts/link.sh $cxx $bin $out $in
   description = LINK $bin
 
-build $builddir/I4Version.h: gen_version i4cli/I4Version.h.in | scripts/gen_version.sh
+# Never exists as a file, so whatever depends on it always runs.
+build always: phony
+
+build $builddir/I4Version.h: gen_version i4cli/I4Version.h.in | scripts/gen_version.sh always
 
 build $builddir/i4core/Interpreter.o: cxx i4core/Interpreter.cpp
 build $builddir/i4core/IRunner.o: cxx i4core/IRunner.cpp
